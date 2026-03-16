@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: #ffffff;
+  --color-bg-subtle: #fafafa;
+  --color-bg-muted: #f4f4f5;
+  --color-bg-inset: #e4e4e7;
+
+  --color-border: #e4e4e7;
+  --color-border-subtle: #f4f4f5;
+
+  --color-fg: #09090b;
+  --color-fg-secondary: #52525b;
+  --color-fg-muted: #a1a1aa;
+  --color-fg-faint: #d4d4d8;
+
+  --color-accent: #f97316;
+  --color-accent-fg: #ffffff;
+  --color-accent-hover: #ea580c;
+  --color-accent-subtle: #fff7ed;
+
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+
+  --color-ring: #f97316;
+}
+
+@layer base {
+  :root {
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .dark {
+    --color-bg: #09090b;
+    --color-bg-subtle: #18181b;
+    --color-bg-muted: #27272a;
+    --color-bg-inset: #3f3f46;
+
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-subtle: rgba(255, 255, 255, 0.04);
+
+    --color-fg: #fafafa;
+    --color-fg-secondary: #a1a1aa;
+    --color-fg-muted: #71717a;
+    --color-fg-faint: #3f3f46;
+
+    --color-accent-subtle: rgba(249, 115, 22, 0.1);
+
+    --color-ring: #f97316;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    min-height: 100vh;
+  }
+
+  /* Focus ring utility */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-ring);
+    border-radius: 4px;
+  }
+
+  /* CodeMirror integration */
+  .cm-editor {
+    height: 100% !important;
+    font-size: 13px !important;
+    background: transparent !important;
+  }
+  .cm-editor .cm-scroller {
+    overflow: auto;
+  }
+  .cm-editor .cm-gutters {
+    border-right: 1px solid var(--color-border) !important;
+    background: transparent !important;
+  }
+  .cm-editor .cm-activeLineGutter,
+  .cm-editor .cm-activeLine {
+    background: var(--color-bg-subtle) !important;
+  }
+  .cm-editor.cm-focused {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Scrollbar (Webkit) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-bg-inset);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fg-muted);
+  }
+}

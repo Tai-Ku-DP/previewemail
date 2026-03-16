@@ -1,0 +1,68 @@
+---
+alwaysApply: true
+description: "Core conventions for Email Template Editor project"
+---
+
+# Project: Email Template Editor (Postmark-like for AWS SES)
+
+## Purpose
+A web-based email template management tool that supports:
+- Writing HTML/CSS email templates with Handlebars syntax (`{{variable}}`)
+- Live preview with mock data injection
+- Template management (CRUD)
+- All data persisted in **IndexedDB** (no backend required)
+
+## Tech Stack
+- **Framework**: React 18 + TypeScript (strict mode)
+- **Build tool**: Vite
+- **Styling**: Tailwind CSS (utility-first, no custom CSS unless necessary)
+- **State management**: Zustand
+- **IndexedDB**: `idb` library (wrapper around IndexedDB)
+- **Handlebars rendering**: `handlebars` npm package
+- **Code editor**: `@uiw/react-codemirror` with HTML mode
+- **Package manager**: pnpm
+
+## Architecture
+```
+src/
+  components/       # Reusable UI components
+    editor/         # Code editor panel (HTML + Text tabs)
+    preview/        # Preview panel (renders compiled template)
+    mockdata/       # Mock data JSON editor panel
+    templates/      # Template list, create, delete
+  hooks/            # Custom React hooks (useTemplates, useMockData, usePreview)
+  stores/           # Zustand stores
+    templateStore.ts
+    editorStore.ts
+  lib/
+    db.ts           # All IndexedDB logic via `idb`
+    handlebars.ts   # Template compilation helpers
+  types/
+    index.ts        # Shared TypeScript interfaces
+  pages/
+    index.tsx       # Main editor page
+```
+
+## Core Data Models
+```typescript
+interface Template {
+  id: string;           // uuid
+  name: string;
+  alias: string;        // slug, unique
+  subject: string;      // supports {{variables}}
+  htmlBody: string;
+  textBody: string;
+  mockData: Record<string, unknown>; // JSON for preview
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+## Coding Standards
+- TypeScript strict mode — never use `any`, use `unknown` and narrow types
+- Named exports only — no default exports except for pages
+- All async functions must use `try/catch` with proper error handling
+- Use `const` over `let` wherever possible
+- Functional components only — no class components
+- Custom hooks for all business logic — keep components as dumb as possible
+- Avoid prop drilling — use Zustand store for shared state

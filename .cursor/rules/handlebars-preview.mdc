@@ -1,0 +1,84 @@
+---
+alwaysApply: false
+globs:
+  - "src/lib/handlebars.ts"
+  - "src/components/preview/**"
+  - "src/components/mockdata/**"
+description: "Rules for Handlebars template compilation and preview rendering"
+---
+
+# Handlebars Template Rules
+
+## Library
+```typescript
+import Handlebars from 'handlebars';
+```
+
+## Template Compilation
+Always compile in a try/catch — invalid templates must show a human-readable error in the preview, never crash the app.
+
+```typescript
+export function compileTemplate(html: string, data: Record<string, unknown>): {
+  result: string | null;
+  error: string | null;
+} {
+  try {
+    const template = Handlebars.compile(html, { strict: false });
+    return { result: template(data), error: null };
+  } catch (err) {
+    return {
+      result: null,
+      error: err instanceof Error ? err.message : 'Template compilation failed',
+    };
+  }
+}
+```
+
+## Subject Line Compilation
+The `subject` field also supports `{{variables}}` — always compile subject separately:
+
+```typescript
+export function compileSubject(subject: string, data: Record<string, unknown>): string {
+  try {
+    return Handlebars.compile(subject)(data);
+  } catch {
+    return subject; // fallback to raw subject on error
+  }
+}
+```
+
+## Mock Data Editor
+- Mock data is always valid JSON — validate on every keystroke
+- Show a red border + error message if JSON is invalid
+- Use a debounce of 300ms before re-rendering the preview after mock data changes
+- Default mock data must match all `{{variable}}` placeholders found in the template
+
+## Preview Panel
+- Render compiled HTML inside a sandboxed `<iframe>` using `srcDoc`
+- Never use `dangerouslySetInnerHTML` for email HTML — always use iframe
+- The preview iframe should have `sandbox="allow-same-origin"` to prevent script execution
+- Show a toolbar above the iframe: Desktop (600px) / Mobile (375px) width toggle
+
+```tsx
+<iframe
+  srcDoc={compiledHtml}
+  sandbox="allow-same-origin"
+  style={{ width: previewWidth, border: 'none', height: '100%' }}
+  title="Email Preview"
+/>
+```
+
+## Auto-extraction of Variables
+Provide a utility to scan the template HTML and extract all `{{variable}}` names so the mock data editor can auto-suggest missing keys:
+
+```typescript
+export function extractVariables(template: string): string[] {
+  const regex = /\{\{[#^/]?(\w[\w.]*)\}\}/g;
+  const vars = new Set<string>();
+  let match;
+  while ((match = regex.exec(template)) !== null) {
+    vars.add(match[1]);
+  }
+  return Array.from(vars);
+}
+```

@@ -1,0 +1,77 @@
+---
+alwaysApply: false
+globs:
+  - "src/lib/ses.ts"
+  - "src/components/sendTest/**"
+description: "AWS SES send-test integration rules"
+---
+
+# AWS SES Integration Rules
+
+## Purpose
+The "Send Test" feature compiles the current template with mock data and sends a real email via AWS SES to a test address. This is entirely client-side using AWS SDK v3.
+
+## Library
+```typescript
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+```
+
+## Configuration
+- AWS credentials (Access Key ID, Secret Access Key, Region) are stored in IndexedDB under a `settings` object store — never in localStorage or hardcoded
+- The user must configure credentials once via a Settings modal
+- Show a warning banner if credentials are not configured
+
+```typescript
+interface SESSettings {
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;       // e.g. 'ap-southeast-1'
+  fromAddress: string;  // verified SES sender address
+}
+```
+
+## Send Test Flow
+1. Compile HTML with current mock data
+2. Compile subject with current mock data
+3. Prompt user for recipient test email address
+4. Send via SESv2Client
+5. Show success/error toast
+
+```typescript
+export async function sendTestEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  settings: SESSettings;
+}): Promise<void> {
+  const client = new SESv2Client({
+    region: params.settings.region,
+    credentials: {
+      accessKeyId: params.settings.accessKeyId,
+      secretAccessKey: params.settings.secretAccessKey,
+    },
+  });
+
+  const command = new SendEmailCommand({
+    FromEmailAddress: params.settings.fromAddress,
+    Destination: { ToAddresses: [params.to] },
+    Content: {
+      Simple: {
+        Subject: { Data: params.subject, Charset: 'UTF-8' },
+        Body: {
+          Html: { Data: params.html, Charset: 'UTF-8' },
+          Text: { Data: params.text, Charset: 'UTF-8' },
+        },
+      },
+    },
+  });
+
+  await client.send(command);
+}
+```
+
+## Security
+- Never log credentials to console
+- Warn user that credentials are stored locally in IndexedDB
+- Provide a "Clear credentials" button in Settings

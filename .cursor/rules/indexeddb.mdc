@@ -1,0 +1,92 @@
+---
+alwaysApply: false
+globs:
+  - "src/lib/db.ts"
+  - "src/hooks/useTemplates.ts"
+  - "src/stores/**"
+description: "IndexedDB persistence rules using the `idb` library"
+---
+
+# IndexedDB Rules
+
+## Library
+Always use the `idb` npm package — never use raw `indexedDB` global directly.
+
+```typescript
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+```
+
+## Schema Definition
+Define a typed schema interface extending `DBSchema`:
+
+```typescript
+interface EmailEditorDB extends DBSchema {
+  templates: {
+    key: string; // id (uuid)
+    value: Template;
+    indexes: {
+      'by-alias': string;
+      'by-updatedAt': number;
+    };
+  };
+}
+```
+
+## DB Initialization
+- Export a single `getDB()` function that lazily opens the DB
+- Always specify the DB version — increment when schema changes
+- Handle `upgrade` callback for creating/migrating object stores
+
+```typescript
+const DB_NAME = 'email-editor-db';
+const DB_VERSION = 1;
+
+let dbPromise: Promise<IDBPDatabase<EmailEditorDB>> | null = null;
+
+export function getDB() {
+  if (!dbPromise) {
+    dbPromise = openDB<EmailEditorDB>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        const store = db.createObjectStore('templates', { keyPath: 'id' });
+        store.createIndex('by-alias', 'alias', { unique: true });
+        store.createIndex('by-updatedAt', 'updatedAt');
+      },
+    });
+  }
+  return dbPromise;
+}
+```
+
+## CRUD Patterns
+Always wrap DB operations in try/catch. Return typed results.
+
+```typescript
+// GET ALL
+export async function getAllTemplates(): Promise<Template[]> {
+  try {
+    const db = await getDB();
+    return db.getAllFromIndex('templates', 'by-updatedAt');
+  } catch (err) {
+    console.error('Failed to get templates:', err);
+    return [];
+  }
+}
+
+// UPSERT
+export async function saveTemplate(template: Template): Promise<void> {
+  const db = await getDB();
+  await db.put('templates', { ...template, updatedAt: Date.now() });
+}
+
+// DELETE
+export async function deleteTemplate(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('templates', id);
+}
+```
+
+## Rules
+- Never mutate objects retrieved from IndexedDB — clone before editing
+- Always update `updatedAt` on save
+- Generate `id` using `crypto.randomUUID()` for new records
+- Do NOT use localStorage or sessionStorage — IndexedDB only
