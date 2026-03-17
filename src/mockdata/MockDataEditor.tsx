@@ -4,7 +4,7 @@ import { json } from '@codemirror/lang-json';
 import { EditorView } from '@codemirror/view';
 import { lintGutter } from '@codemirror/lint';
 import { clsx } from 'clsx';
-import { extractVariables } from '@/lib/handlebars';
+import { buildMockDataSkeleton, extractVariables } from '@/lib/handlebars';
 import { formatJson } from '@/lib/formatter';
 import { jsonLinter } from '@/lib/linter';
 
@@ -16,6 +16,28 @@ interface MockDataEditorProps {
 }
 
 const extensions = [json(), EditorView.lineWrapping, lintGutter(), jsonLinter];
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function mergeDeep(target: Record<string, unknown>, source: Record<string, unknown>) {
+  for (const [k, v] of Object.entries(source)) {
+    const existing = target[k];
+    if (Array.isArray(v)) {
+      if (!Array.isArray(existing) || existing.length === 0) {
+        target[k] = v;
+      } else if (isPlainObject(v[0]) && isPlainObject(existing[0])) {
+        mergeDeep(existing[0] as Record<string, unknown>, v[0] as Record<string, unknown>);
+      }
+    } else if (isPlainObject(v)) {
+      if (!isPlainObject(existing)) target[k] = {};
+      mergeDeep(target[k] as Record<string, unknown>, v);
+    } else {
+      if (!(k in target)) target[k] = v;
+    }
+  }
+}
 
 export const MockDataEditor = ({
   value,
@@ -33,14 +55,15 @@ export const MockDataEditor = ({
       current = {};
     }
 
-    const filled = { ...current };
-    for (const v of detectedVars) {
-      if (!(v in filled)) {
-        filled[v] = null;
-      }
-    }
+    const filled: Record<string, unknown> = { ...current };
+
+    // First, build a skeleton that understands {{#each}} nesting.
+    const skeleton = buildMockDataSkeleton(htmlBody);
+    mergeDeep(filled, skeleton);
+
+    // No second-pass "flat" fill here: skeleton already captures correct nesting contexts.
     onChange(JSON.stringify(filled, null, 2));
-  }, [value, detectedVars, onChange]);
+  }, [value, onChange, htmlBody]);
 
   const handleFormat = useCallback(() => {
     try {

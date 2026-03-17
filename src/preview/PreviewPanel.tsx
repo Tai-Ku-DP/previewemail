@@ -36,8 +36,8 @@ export const PreviewPanel = ({
     useEditorStore();
 
   return (
-    <div className="flex h-full flex-col bg-bg">
-      <div className="flex h-10 items-end justify-between border-b border-border px-2">
+    <div className="flex h-full flex-col bg-bg-subtle">
+      <div className="flex h-10 items-end justify-between border-b border-border bg-bg px-2">
         <div className="flex">
           {TABS.map((tab) => (
             <button

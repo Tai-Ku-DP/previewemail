@@ -39,8 +39,13 @@ export default function HomePage() {
   } = useLayouts();
 
   const sidebarTab = useEditorStore((s) => s.sidebarTab);
+  const sidebarCollapsed = useEditorStore((s) => s.sidebarCollapsed);
   const editorMaximized = useEditorStore((s) => s.editorMaximized);
   const toggleRightPanel = useEditorStore((s) => s.toggleRightPanel);
+  const isDirty = useEditorStore((s) => s.isDirty);
+  const setDirty = useEditorStore((s) => s.setDirty);
+  const editorSplit = useEditorStore((s) => s.editorSplit);
+  const setEditorSplit = useEditorStore((s) => s.setEditorSplit);
   const { settings, isConfigured, save: saveSettings, clear: clearSettings } = useSettings();
 
   // Template editing state
@@ -59,6 +64,8 @@ export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sendTestOpen, setSendTestOpen] = useState(false);
   const [layoutPickerOpen, setLayoutPickerOpen] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const splitRef = useRef<HTMLDivElement | null>(null);
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -101,8 +108,9 @@ export default function HomePage() {
     (value: string) => {
       setMockDataJson(value);
       updateFromJson(value);
+      setDirty(true);
     },
-    [updateFromJson],
+    [updateFromJson, setDirty],
   );
 
   // ── Template actions ──
@@ -132,10 +140,23 @@ export default function HomePage() {
         mockData,
       });
       toast.success('Template saved');
+      setDirty(false);
+      setJustSaved(true);
+      window.setTimeout(() => setJustSaved(false), 2000);
     } catch {
       toast.error('Failed to save template');
     }
-  }, [selectedTemplate, templateName, htmlBody, textBody, subject, templateLayoutId, mockData, updateTemplate]);
+  }, [
+    selectedTemplate,
+    templateName,
+    htmlBody,
+    textBody,
+    subject,
+    templateLayoutId,
+    mockData,
+    updateTemplate,
+    setDirty,
+  ]);
 
   const handleDeleteTemplate = useCallback(
     async (id: string) => {
@@ -180,10 +201,13 @@ export default function HomePage() {
         textBody: layoutTextBody,
       });
       toast.success('Layout saved');
+      setDirty(false);
+      setJustSaved(true);
+      window.setTimeout(() => setJustSaved(false), 2000);
     } catch {
       toast.error('Failed to save layout');
     }
-  }, [selectedLayout, layoutName, layoutHtmlBody, layoutTextBody, updateLayout]);
+  }, [selectedLayout, layoutName, layoutHtmlBody, layoutTextBody, updateLayout, setDirty]);
 
   const handleDeleteLayout = useCallback(
     async (id: string) => {
@@ -209,8 +233,6 @@ export default function HomePage() {
 
   const handleSendTest = useCallback(() => {
     if (!isConfigured) {
-      toast.error('Configure AWS SES credentials in Settings first');
-      setSettingsOpen(true);
       return;
     }
     if (!renderedHtml) {
@@ -333,7 +355,10 @@ export default function HomePage() {
               <input
                 type="text"
                 value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
+                onChange={(e) => {
+                  setTemplateName(e.target.value);
+                  setDirty(true);
+                }}
                 className="h-7 w-40 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
                 aria-label="Template name"
               />
@@ -341,7 +366,10 @@ export default function HomePage() {
               <input
                 type="text"
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setDirty(true);
+                }}
                 placeholder="Subject line {{variables}}"
                 className="h-7 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary placeholder:text-fg-muted transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
                 aria-label="Email subject"
@@ -358,7 +386,10 @@ export default function HomePage() {
               <input
                 type="text"
                 value={layoutName}
-                onChange={(e) => setLayoutName(e.target.value)}
+                onChange={(e) => {
+                  setLayoutName(e.target.value);
+                  setDirty(true);
+                }}
                 className="h-7 w-48 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
                 aria-label="Layout name"
               />
@@ -385,8 +416,19 @@ export default function HomePage() {
           {isEditingTemplate && (
             <button
               onClick={handleSendTest}
-              className="inline-flex h-8 items-center rounded-md border border-border px-3 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+              disabled={!isConfigured}
+              className={clsx(
+                'inline-flex h-8 items-center rounded-md border border-border px-3 text-[13px] font-medium transition-colors',
+                isConfigured
+                  ? 'text-fg-secondary hover:bg-bg-subtle hover:text-fg'
+                  : 'cursor-not-allowed text-fg-muted opacity-60',
+              )}
               aria-label="Send test email"
+              title={
+                isConfigured
+                  ? 'Send test email'
+                  : 'Configure AWS SES in Settings to enable sending tests'
+              }
             >
               Send Test
             </button>
@@ -397,8 +439,9 @@ export default function HomePage() {
               onClick={() => void handleSave()}
               className="inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
               aria-label="Save"
+              title="Save (Ctrl+S / Cmd+S)"
             >
-              Save
+              {justSaved && !isDirty ? 'Saved ✓' : 'Save'}
             </button>
           )}
 
@@ -418,28 +461,15 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* SES warning banner */}
-      {!isConfigured && (
-        <div className="flex items-center gap-2 border-b border-border bg-accent-subtle px-4 py-1.5">
-          <svg className="h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          <span className="text-[12px] text-fg-secondary">
-            AWS SES credentials not configured.
-          </span>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="text-[12px] font-medium text-accent transition-colors hover:underline"
-          >
-            Configure
-          </button>
-        </div>
-      )}
-
       {/* 3-panel layout */}
       <div className="flex min-h-0 flex-1">
         {/* Sidebar */}
-        <aside className="w-[256px] shrink-0 border-r border-border bg-bg">
+        <aside
+          className={clsx(
+            'shrink-0 border-r border-border bg-bg transition-[width] duration-150',
+            sidebarCollapsed ? 'w-[64px]' : 'w-[208px]',
+          )}
+        >
           <TemplateList
             templates={templates}
             layouts={layouts}
@@ -456,8 +486,14 @@ export default function HomePage() {
 
         {/* Template editor */}
         {isEditingTemplate && (
-          <div className="flex min-w-0 flex-1">
-            <div className={clsx('flex flex-col', editorMaximized ? 'w-full' : 'w-1/2 border-r border-border')}>
+          <div className="flex min-w-0 flex-1" ref={splitRef}>
+            <div
+              className={clsx(
+                'flex flex-col border-r border-border',
+                editorMaximized && 'w-full border-r-0',
+              )}
+              style={!editorMaximized ? { flexBasis: `${editorSplit * 100}%` } : undefined}
+            >
               <EditorPanel
                 htmlBody={htmlBody}
                 textBody={textBody}
@@ -466,7 +502,39 @@ export default function HomePage() {
               />
             </div>
             {!editorMaximized && (
-              <div className="flex w-1/2 flex-col">
+              <>
+                <div
+                  className="flex w-[6px] cursor-col-resize items-stretch justify-center bg-transparent hover:bg-bg-subtle"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const container = splitRef.current;
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    const startX = e.clientX;
+                    const startSplit = editorSplit;
+
+                    const onMove = (moveEvent: MouseEvent) => {
+                      const delta = moveEvent.clientX - startX;
+                      const ratio = startSplit + delta / rect.width;
+                      setEditorSplit(ratio);
+                    };
+
+                    const onUp = () => {
+                      window.removeEventListener('mousemove', onMove);
+                      window.removeEventListener('mouseup', onUp);
+                    };
+
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                  }}
+                  aria-label="Resize editor and preview panels"
+                >
+                  <div className="my-4 h-full w-[2px] rounded-full bg-border" />
+                </div>
+                <div
+                  className="flex flex-col"
+                  style={{ flexBasis: `${(1 - editorSplit) * 100}%` }}
+                >
                 <PreviewPanel
                   compiledHtml={renderedHtml}
                   compiledSubject={compiledSubject}
@@ -476,15 +544,22 @@ export default function HomePage() {
                   onMockDataChange={handleMockDataChange}
                   mockDataError={parseError}
                 />
-              </div>
+                </div>
+              </>
             )}
           </div>
         )}
 
         {/* Layout editor */}
         {isEditingLayout && (
-          <div className="flex min-w-0 flex-1">
-            <div className={clsx('flex flex-col', editorMaximized ? 'w-full' : 'w-1/2 border-r border-border')}>
+          <div className="flex min-w-0 flex-1" ref={splitRef}>
+            <div
+              className={clsx(
+                'flex flex-col border-r border-border',
+                editorMaximized && 'w-full border-r-0',
+              )}
+              style={!editorMaximized ? { flexBasis: `${editorSplit * 100}%` } : undefined}
+            >
               <EditorPanel
                 htmlBody={layoutHtmlBody}
                 textBody={layoutTextBody}
@@ -493,9 +568,42 @@ export default function HomePage() {
               />
             </div>
             {!editorMaximized && (
-              <div className="flex w-1/2 flex-col">
-                <LayoutPreview htmlBody={layoutHtmlBody} />
-              </div>
+              <>
+                <div
+                  className="flex w-[6px] cursor-col-resize items-stretch justify-center bg-transparent hover:bg-bg-subtle"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const container = splitRef.current;
+                    if (!container) return;
+                    const rect = container.getBoundingClientRect();
+                    const startX = e.clientX;
+                    const startSplit = editorSplit;
+
+                    const onMove = (moveEvent: MouseEvent) => {
+                      const delta = moveEvent.clientX - startX;
+                      const ratio = startSplit + delta / rect.width;
+                      setEditorSplit(ratio);
+                    };
+
+                    const onUp = () => {
+                      window.removeEventListener('mousemove', onMove);
+                      window.removeEventListener('mouseup', onUp);
+                    };
+
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                  }}
+                  aria-label="Resize editor and preview panels"
+                >
+                  <div className="my-4 h-full w-[2px] rounded-full bg-border" />
+                </div>
+                <div
+                  className="flex flex-col"
+                  style={{ flexBasis: `${(1 - editorSplit) * 100}%` }}
+                >
+                  <LayoutPreview htmlBody={layoutHtmlBody} />
+                </div>
+              </>
             )}
           </div>
         )}

@@ -24,10 +24,19 @@ export const EditorPanel = ({
   onTextChange,
 }: EditorPanelProps) => {
   const { editorTab, setEditorTab, editorMaximized, toggleEditorMaximized } = useEditorStore();
+  const setDirty = useEditorStore((s) => s.setDirty);
   const [formatting, setFormatting] = useState(false);
 
   const value = editorTab === 'html' ? htmlBody : textBody;
   const onChange = editorTab === 'html' ? onHtmlChange : onTextChange;
+
+  const handleChange = useCallback(
+    (val: string) => {
+      onChange(val);
+      setDirty(true);
+    },
+    [onChange, setDirty],
+  );
 
   const handleFormat = useCallback(async () => {
     if (editorTab !== 'html' || !htmlBody.trim()) return;
@@ -102,7 +111,7 @@ export const EditorPanel = ({
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <CodeEditor value={value} tab={editorTab} onChange={onChange} />
+        <CodeEditor value={value} tab={editorTab} onChange={handleChange} />
       </div>
     </div>
   );

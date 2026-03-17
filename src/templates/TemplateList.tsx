@@ -33,7 +33,7 @@ export const TemplateList = ({
   onDeleteTemplate,
   onDeleteLayout,
 }: TemplateListProps) => {
-  const { sidebarTab, setSidebarTab } = useEditorStore();
+  const { sidebarTab, setSidebarTab, sidebarCollapsed, setSidebarCollapsed } = useEditorStore();
   const [search, setSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -91,6 +91,73 @@ export const TemplateList = ({
     setConfirmDeleteId(null);
   };
 
+  if (sidebarCollapsed) {
+    const isTemplatesTab = sidebarTab === 'templates';
+    const count = isTemplatesTab ? templates.length : layouts.length;
+    return (
+      <div className="flex h-full flex-col items-center justify-between py-3">
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={() => handleTabChange('templates')}
+            className={clsx(
+              'flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors',
+              sidebarTab === 'templates'
+                ? 'bg-bg-subtle text-fg'
+                : 'hover:bg-bg-subtle hover:text-fg-secondary',
+            )}
+            aria-label="Templates"
+            title="Templates"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleTabChange('layouts')}
+            className={clsx(
+              'flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors',
+              sidebarTab === 'layouts'
+                ? 'bg-bg-subtle text-fg'
+                : 'hover:bg-bg-subtle hover:text-fg-secondary',
+            )}
+            aria-label="Layouts"
+            title="Layouts"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 0 1-1.125-1.125v-3.75ZM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-8.25ZM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-2.25Z" />
+            </svg>
+          </button>
+          <span className="mt-1 rounded-full bg-bg-muted px-2 py-0.5 text-[10px] font-medium text-fg-muted">
+            {count}
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <button
+            onClick={handleCreate}
+            aria-label={isTemplatesTab ? 'New template' : 'New layout'}
+            title={isTemplatesTab ? 'New template' : 'New layout'}
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-bg-muted text-fg-secondary transition-colors hover:bg-bg-inset hover:text-fg"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setSidebarCollapsed(false)}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M3 2.5v11m3-8 3 2.5L6 11.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Sidebar tabs */}
@@ -116,16 +183,28 @@ export const TemplateList = ({
         <span className="text-[11px] text-fg-muted">
           {items.length} {isTemplates ? 'template' : 'layout'}{items.length !== 1 ? 's' : ''}
         </span>
-        <button
-          onClick={handleCreate}
-          aria-label={isTemplates ? 'New template' : 'New layout'}
-          className="inline-flex h-7 items-center gap-1 rounded-md bg-bg-muted px-2.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-bg-inset hover:text-fg"
-        >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          New
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleCreate}
+            aria-label={isTemplates ? 'New template' : 'New layout'}
+            className="inline-flex h-7 items-center gap-1 rounded-md bg-bg-muted px-2.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-bg-inset hover:text-fg"
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New
+          </button>
+          <button
+            onClick={() => setSidebarCollapsed(true)}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M13 2.5v11M10 5.5 7 8l3 2.5" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Search */}
