@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useRef } from 'react';
-import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
-import { html } from '@codemirror/lang-html';
-import { indentUnit } from '@codemirror/language';
-import { EditorView } from '@codemirror/view';
-import { lintGutter } from '@codemirror/lint';
-import { htmlLinter } from '@/lib/linter';
-import type { EditorTab } from '@/types';
+import { useCallback, useMemo, useRef } from "react";
+import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { html } from "@codemirror/lang-html";
+import { indentUnit } from "@codemirror/language";
+import { EditorView } from "@codemirror/view";
+import { lintGutter } from "@codemirror/lint";
+import { htmlLinter } from "@/lib/linter";
+import type { EditorTab } from "@/types";
 
 interface CodeEditorProps {
   value: string;
@@ -19,9 +19,15 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
 
   const extensions = useMemo(
     () =>
-      tab === 'html'
-        ? [html({ autoCloseTags: true }), indentUnit.of('  '), EditorView.lineWrapping, lintGutter(), htmlLinter]
-        : [indentUnit.of('  '), EditorView.lineWrapping],
+      tab === "html"
+        ? [
+            html({ autoCloseTags: true }),
+            indentUnit.of("  "),
+            EditorView.lineWrapping,
+            lintGutter(),
+            htmlLinter,
+          ]
+        : [indentUnit.of("  "), EditorView.lineWrapping],
     [tab],
   );
 
@@ -44,7 +50,8 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
       basicSetup={{
         lineNumbers: true,
         foldGutter: true,
-        highlightActiveLine: true,
+        highlightActiveLine: false,
+        highlightActiveLineGutter: false,
         autocompletion: true,
         closeBrackets: true,
         tabSize: 2,

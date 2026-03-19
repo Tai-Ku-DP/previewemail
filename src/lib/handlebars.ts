@@ -224,7 +224,6 @@ function ensureArrayItem(root: Record<string, unknown>, path: string): Record<st
 
 function ensureArrayItemInContext(
   ctx: Record<string, unknown>,
-  root: Record<string, unknown>,
   path: string,
 ): Record<string, unknown> {
   // If the path is simple (no dots), it's relative to current context.
@@ -299,7 +298,7 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
             return;
           }
 
-          const nextCtx = ensureArrayItemInContext(ctx, root, targetPath);
+          const nextCtx = ensureArrayItemInContext(ctx, targetPath);
           walk(node.program, nextCtx);
           walk(node.inverse, ctx);
           return;
@@ -313,7 +312,7 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
           !builtInHelpers.has(helper) &&
           (!Array.isArray(node.params) || node.params.length === 0)
         ) {
-          const nextCtx = ensureArrayItemInContext(ctx, root, helper);
+          const nextCtx = ensureArrayItemInContext(ctx, helper);
           walk(node.program, nextCtx);
           walk(node.inverse, ctx);
           return;

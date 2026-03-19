@@ -71,7 +71,9 @@
   /* Focus ring utility */
   *:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-ring);
+    box-shadow:
+      0 0 0 2px var(--color-bg),
+      0 0 0 4px var(--color-ring);
     border-radius: 4px;
   }
 
@@ -79,7 +81,13 @@
   .cm-editor {
     height: 100% !important;
     font-size: 13px !important;
-    background: transparent !important;
+    background: #3b404a !important;
+  }
+  .cm-editor .cm-content {
+    caret-color: var(--color-accent) !important;
+  }
+  .cm-editor .cm-cursor {
+    border-left-color: var(--color-accent) !important;
   }
   .cm-editor .cm-scroller {
     overflow: auto;
@@ -88,14 +96,14 @@
     border-right: 1px solid var(--color-border) !important;
     background: transparent !important;
   }
-  .cm-editor .cm-activeLineGutter,
-  .cm-editor .cm-activeLine {
+  /* .cm-editor .cm-activeLineGutter, */
+  /* .cm-editor .cm-activeLine {
     background: var(--color-bg-subtle) !important;
   }
   .cm-editor.cm-focused {
     outline: none !important;
     box-shadow: none !important;
-  }
+  } */
 
   /* Scrollbar (Webkit) */
   ::-webkit-scrollbar {

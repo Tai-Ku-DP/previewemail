@@ -35,6 +35,7 @@ export interface SESSettings {
 }
 
 export type EditorTab = 'html' | 'text';
+export type TemplateEditorMainTab = 'edit' | 'preview';
 export type RightPanelTab = 'preview' | 'mockdata';
 export type PreviewWidth = 600 | 375;
 export type SidebarTab = 'templates' | 'layouts';
