@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
-import { toast } from 'sonner';
-import { clsx } from 'clsx';
-import type { SESSettings } from '@/types';
+import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { toast } from "sonner";
+import { clsx } from "clsx";
+import type { SESSettings } from "@/types";
 
 interface SettingsModalProps {
   open: boolean;
@@ -12,24 +12,24 @@ interface SettingsModalProps {
 }
 
 const EMPTY: SESSettings = {
-  accessKeyId: '',
-  secretAccessKey: '',
-  region: 'us-east-1',
-  fromAddress: '',
+  accessKeyId: "",
+  secretAccessKey: "",
+  region: "us-east-1",
+  fromAddress: "",
 };
 
 const REGIONS = [
-  'us-east-1',
-  'us-east-2',
-  'us-west-1',
-  'us-west-2',
-  'eu-west-1',
-  'eu-west-2',
-  'eu-central-1',
-  'ap-southeast-1',
-  'ap-southeast-2',
-  'ap-northeast-1',
-  'ap-south-1',
+  "us-east-1",
+  "us-east-2",
+  "us-west-1",
+  "us-west-2",
+  "eu-west-1",
+  "eu-west-2",
+  "eu-central-1",
+  "ap-southeast-1",
+  "ap-southeast-2",
+  "ap-northeast-1",
+  "ap-south-1",
 ];
 
 export const SettingsModal = ({
@@ -49,26 +49,31 @@ export const SettingsModal = ({
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
-      if (!form.accessKeyId || !form.secretAccessKey || !form.region || !form.fromAddress) {
-        toast.error('All fields are required');
+      if (
+        !form.accessKeyId ||
+        !form.secretAccessKey ||
+        !form.region ||
+        !form.fromAddress
+      ) {
+        toast.error("All fields are required");
         return;
       }
       setSaving(true);
       try {
         await onSave(form);
-        toast.success('AWS SES credentials saved');
+        toast.success("AWS SES credentials saved");
         onClose();
       } catch {
-        toast.error('Failed to save credentials');
+        toast.error("Failed to save credentials");
       } finally {
         setSaving(false);
       }
@@ -80,10 +85,10 @@ export const SettingsModal = ({
     try {
       await onClear();
       setForm(EMPTY);
-      toast.success('Credentials cleared');
+      toast.success("Credentials cleared");
       onClose();
     } catch {
-      toast.error('Failed to clear credentials');
+      toast.error("Failed to clear credentials");
     }
   }, [onClear, onClose]);
 
@@ -105,40 +110,66 @@ export const SettingsModal = ({
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
             <h2 className="text-sm font-semibold text-fg">AWS SES Settings</h2>
-            <p className="mt-0.5 text-xs text-fg-muted">Configure your email sending credentials</p>
+            <p className="mt-0.5 text-xs text-fg-muted">
+              Configure your email sending credentials
+            </p>
           </div>
           <button
             onClick={onClose}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
             aria-label="Close settings"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 px-6 py-5">
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="space-y-4 px-6 py-5"
+        >
           <div className="flex items-start gap-2.5 rounded-lg border border-accent/20 bg-accent-subtle px-3 py-2.5">
-            <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            <svg
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+              />
             </svg>
             <p className="text-[12px] leading-relaxed text-fg-secondary">
-              Credentials are stored locally in IndexedDB. They never leave your device.
+              Credentials are stored locally in IndexedDB. They never leave your
+              device.
             </p>
           </div>
 
           <Field
             label="Access Key ID"
             value={form.accessKeyId}
-            onChange={(v) => update('accessKeyId', v)}
+            onChange={(v) => update("accessKeyId", v)}
             placeholder="AKIAIOSFODNN7EXAMPLE"
           />
           <Field
             label="Secret Access Key"
             value={form.secretAccessKey}
-            onChange={(v) => update('secretAccessKey', v)}
+            onChange={(v) => update("secretAccessKey", v)}
             placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             type="password"
           />
@@ -148,18 +179,20 @@ export const SettingsModal = ({
             </label>
             <select
               value={form.region}
-              onChange={(e) => update('region', e.target.value)}
+              onChange={(e) => update("region", e.target.value)}
               className="h-9 w-full rounded-md border border-border bg-bg px-3 text-[13px] text-fg transition-colors focus-visible:ring-2 focus-visible:ring-ring"
             >
               {REGIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
           </div>
           <Field
             label="From Address (verified)"
             value={form.fromAddress}
-            onChange={(v) => update('fromAddress', v)}
+            onChange={(v) => update("fromAddress", v)}
             placeholder="noreply@yourdomain.com"
             type="email"
           />
@@ -189,11 +222,11 @@ export const SettingsModal = ({
                 type="submit"
                 disabled={saving}
                 className={clsx(
-                  'inline-flex h-9 items-center rounded-md bg-fg px-4 text-[13px] font-medium text-bg transition-opacity hover:opacity-90',
-                  saving && 'opacity-50',
+                  "inline-flex h-9 items-center rounded-md bg-fg px-4 text-[13px] font-medium text-bg transition-opacity hover:opacity-90",
+                  saving && "opacity-50",
                 )}
               >
-                {saving ? 'Saving...' : 'Save credentials'}
+                {saving ? "Saving..." : "Save credentials"}
               </button>
             </div>
           </div>
@@ -208,7 +241,7 @@ function Field({
   value,
   onChange,
   placeholder,
-  type = 'text',
+  type = "text",
 }: {
   label: string;
   value: string;

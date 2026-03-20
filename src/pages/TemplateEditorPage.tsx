@@ -38,7 +38,6 @@ export default function TemplateEditorPage() {
   const togglePreviewMockData = useEditorStore((s) => s.togglePreviewMockData);
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
-  const rightPanelTab = useEditorStore((s) => s.rightPanelTab);
   const isDirty = useEditorStore((s) => s.isDirty);
   const setDirty = useEditorStore((s) => s.setDirty);
   const {
@@ -61,6 +60,8 @@ export default function TemplateEditorPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
+  const [isTemplateDirty, setIsTemplateDirty] = useState(false);
+  const [isMockDataDirty, setIsMockDataDirty] = useState(false);
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -82,6 +83,8 @@ export default function TemplateEditorPage() {
       setMockDataJson(json);
       reset(selectedTemplate.mockData);
       setDirty(false);
+      setIsTemplateDirty(false);
+      setIsMockDataDirty(false);
     });
   }, [selectedTemplate, reset, setDirty]);
 
@@ -97,11 +100,17 @@ export default function TemplateEditorPage() {
     activeLayout?.htmlBody,
   );
 
+  const previewSrcDoc = useMemo(
+    () => wrapIframeSrcDoc(renderedHtml ?? ""),
+    [renderedHtml],
+  );
+
   const handleMockDataChange = useCallback(
     (value: string) => {
       setMockDataJson(value);
       updateFromJson(value);
       setDirty(true);
+      setIsMockDataDirty(true);
     },
     [updateFromJson, setDirty],
   );
@@ -144,64 +153,87 @@ export default function TemplateEditorPage() {
     }
 
     const filled: Record<string, unknown> = { ...current };
-    const skeleton = buildMockDataSkeleton(htmlBody);
-    mergeDeep(filled, skeleton);
+
+    // Merge skeleton from both template + selected layout so layout-only vars (e.g. {{companyName}})
+    // are also auto-mapped when switching/choosing a layout.
+    mergeDeep(filled, buildMockDataSkeleton(htmlBody));
+    if (activeLayout?.htmlBody) {
+      mergeDeep(filled, buildMockDataSkeleton(activeLayout.htmlBody));
+    }
     const nextJson = JSON.stringify(filled, null, 2);
     if (nextJson !== mockDataJson) {
       queueMicrotask(() => {
         setMockDataJson(nextJson);
         updateFromJson(nextJson);
+        setDirty(true);
+        setIsMockDataDirty(true);
       });
-    }
-  }, [templateEditorMainTab, htmlBody, mockDataJson, updateFromJson]);
-
-  const handleSaveTemplate = useCallback(async (overrides?: {
-    htmlBody?: string;
-    mockData?: Record<string, unknown>;
-    mockDataJson?: string;
-  }) => {
-    if (!selectedTemplate) return;
-    try {
-      const nextHtmlBody = overrides?.htmlBody ?? htmlBody;
-      const nextMockData = overrides?.mockData ?? mockData;
-      await updateTemplate(selectedTemplate.id, {
-        name: templateName,
-        htmlBody: nextHtmlBody,
-        textBody,
-        subject,
-        layoutId: templateLayoutId,
-        mockData: nextMockData,
-      });
-      if (overrides?.htmlBody && overrides.htmlBody !== htmlBody) {
-        setHtmlBody(overrides.htmlBody);
-      }
-      if (overrides?.mockDataJson && overrides.mockDataJson !== mockDataJson) {
-        setMockDataJson(overrides.mockDataJson);
-        updateFromJson(overrides.mockDataJson);
-      }
-      toast.success("Template saved");
-      setDirty(false);
-      setJustSaved(true);
-      window.setTimeout(() => setJustSaved(false), 2000);
-    } catch {
-      toast.error("Failed to save template");
     }
   }, [
-    selectedTemplate,
-    templateName,
+    templateEditorMainTab,
     htmlBody,
-    textBody,
-    subject,
-    templateLayoutId,
-    mockData,
-    updateTemplate,
-    setDirty,
+    activeLayout?.htmlBody,
     mockDataJson,
     updateFromJson,
+    setDirty,
   ]);
 
+  const handleSaveTemplate = useCallback(
+    async (overrides?: {
+      htmlBody?: string;
+      mockData?: Record<string, unknown>;
+      mockDataJson?: string;
+    }) => {
+      if (!selectedTemplate) return;
+      try {
+        const nextHtmlBody = overrides?.htmlBody ?? htmlBody;
+        const nextMockData = overrides?.mockData ?? mockData;
+        await updateTemplate(selectedTemplate.id, {
+          name: templateName,
+          htmlBody: nextHtmlBody,
+          textBody,
+          subject,
+          layoutId: templateLayoutId,
+          mockData: nextMockData,
+        });
+        if (overrides?.htmlBody && overrides.htmlBody !== htmlBody) {
+          setHtmlBody(overrides.htmlBody);
+        }
+        if (
+          overrides?.mockDataJson &&
+          overrides.mockDataJson !== mockDataJson
+        ) {
+          setMockDataJson(overrides.mockDataJson);
+          updateFromJson(overrides.mockDataJson);
+        }
+        toast.success("Template saved");
+        setDirty(false);
+        setIsTemplateDirty(false);
+        setIsMockDataDirty(false);
+        setJustSaved(true);
+        window.setTimeout(() => setJustSaved(false), 2000);
+      } catch {
+        toast.error("Failed to save template");
+      }
+    },
+    [
+      selectedTemplate,
+      templateName,
+      htmlBody,
+      textBody,
+      subject,
+      templateLayoutId,
+      mockData,
+      updateTemplate,
+      setDirty,
+      mockDataJson,
+      updateFromJson,
+    ],
+  );
+
   useEffect(() => {
-    if (!isDirty || rightPanelTab === "mockdata") {
+    const mockDataOnlyDirty = isMockDataDirty && !isTemplateDirty;
+    if (!isDirty || templateEditorMainTab !== "preview" || mockDataOnlyDirty) {
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
       return;
@@ -218,7 +250,9 @@ export default function TemplateEditorPage() {
     };
   }, [
     isDirty,
-    rightPanelTab,
+    templateEditorMainTab,
+    isTemplateDirty,
+    isMockDataDirty,
     handleSaveTemplate,
     htmlBody,
     textBody,
@@ -249,39 +283,7 @@ export default function TemplateEditorPage() {
         e.preventDefault();
         if (formatInProgress.current) return;
         formatInProgress.current = true;
-
-        const editorTab = useEditorStore.getState().editorTab;
-        const rightTab = useEditorStore.getState().rightPanelTab;
-
-        const save = async () => {
-          if (rightTab === "mockdata") {
-            try {
-              const formattedJson = formatJson(mockDataJson);
-              const parsed = JSON.parse(formattedJson) as Record<string, unknown>;
-              await handleSaveTemplate({
-                mockData: parsed,
-                mockDataJson: formattedJson,
-              });
-            } catch {
-              await handleSaveTemplate();
-            }
-            return;
-          }
-
-          if (editorTab === "html" && htmlBody.trim()) {
-            try {
-              const formattedHtml = await formatHtml(htmlBody);
-              await handleSaveTemplate({ htmlBody: formattedHtml });
-            } catch {
-              await handleSaveTemplate();
-            }
-            return;
-          }
-
-          await handleSaveTemplate();
-        };
-
-        void save().finally(() => {
+        void handleSaveTemplate().finally(() => {
           formatInProgress.current = false;
         });
       }
@@ -310,6 +312,9 @@ export default function TemplateEditorPage() {
           void formatHtml(htmlBody)
             .then((formatted) => {
               setHtmlBody(formatted);
+              setIsTemplateDirty(true);
+              setIsMockDataDirty(false);
+              setDirty(true);
               toast.success("HTML formatted");
             })
             .catch(() => toast.error("Format failed — check Handlebars syntax"))
@@ -329,6 +334,7 @@ export default function TemplateEditorPage() {
     mockDataJson,
     handleMockDataChange,
     htmlBody,
+    setDirty,
   ]);
 
   if (!templateId) return <Navigate to="/templates" replace />;
@@ -341,7 +347,7 @@ export default function TemplateEditorPage() {
   const isEditingTemplate = Boolean(selectedTemplate);
 
   return (
-    <div className="flex h-screen flex-col bg-bg">
+    <div className="flex h-screen flex-col bg-bg overflow-auto">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -393,6 +399,8 @@ export default function TemplateEditorPage() {
                 value={templateName}
                 onChange={(e) => {
                   setTemplateName(e.target.value);
+                  setIsTemplateDirty(true);
+                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
                 className="h-7 w-48 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
@@ -404,6 +412,8 @@ export default function TemplateEditorPage() {
                 value={subject}
                 onChange={(e) => {
                   setSubject(e.target.value);
+                  setIsTemplateDirty(true);
+                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
                 placeholder="Subject line {{variables}}"
@@ -420,6 +430,8 @@ export default function TemplateEditorPage() {
               value={templateLayoutId ?? ""}
               onChange={(e) => {
                 setTemplateLayoutId(e.target.value || null);
+                setIsTemplateDirty(true);
+                setIsMockDataDirty(false);
                 setDirty(true);
               }}
               className="h-8 rounded-md border border-border bg-bg px-2 pr-7 text-[12px] text-fg-secondary transition-colors hover:bg-bg-subtle"
@@ -539,20 +551,17 @@ export default function TemplateEditorPage() {
               {templateEditorMainTab === "edit" ? (
                 <EditorPanel
                   htmlBody={htmlBody}
-                  textBody={textBody}
                   onHtmlChange={(v) => {
                     setHtmlBody(v);
-                    setDirty(true);
-                  }}
-                  onTextChange={(v) => {
-                    setTextBody(v);
+                    setIsTemplateDirty(true);
+                    setIsMockDataDirty(false);
                     setDirty(true);
                   }}
                 />
               ) : (
                 <div
                   className={clsx(
-                    "flex h-full min-w-0 bg-bg-subtle",
+                    "flex min-h-0 flex-1 min-w-0 bg-bg-subtle",
                     editorMaximized && "pointer-events-none",
                   )}
                   ref={previewSplitRef}
@@ -603,10 +612,10 @@ export default function TemplateEditorPage() {
                       )}
 
                       <iframe
-                        srcDoc={renderedHtml ?? ""}
+                        srcDoc={previewSrcDoc}
                         sandbox="allow-same-origin"
                         title="Email Preview"
-                        className="min-h-0 flex-1 w-full border-0 bg-white"
+                        className="h-full min-h-0 flex-1 w-full border-0 bg-white"
                       />
                     </div>
                   </div>
@@ -683,4 +692,27 @@ export default function TemplateEditorPage() {
       </div>
     </div>
   );
+}
+
+function wrapIframeSrcDoc(html: string): string {
+  const safe = html ?? "";
+  const style = `<style>html,body{margin:0 !important;padding:0 !important;}</style>`;
+
+  if (!safe.trim()) return safe;
+
+  // If template already includes <html>/<head>, inject style there.
+  if (/<html[\s>]/i.test(safe)) {
+    if (/<head[\s>]/i.test(safe)) {
+      return safe.replace(/<head([^>]*)>/i, `<head$1>${style}`);
+    }
+    return safe.replace(/<html([^>]*)>/i, `<html$1><head>${style}</head>`);
+  }
+
+  // If template includes <body>, inject style into it.
+  if (/<body[\s>]/i.test(safe)) {
+    return safe.replace(/<body([^>]*)>/i, `<body$1>${style}`);
+  }
+
+  // Otherwise, wrap as a full document.
+  return `<!doctype html><html><head>${style}</head><body>${safe}</body></html>`;
 }

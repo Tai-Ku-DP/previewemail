@@ -99,6 +99,14 @@
     height: 100%;
   }
 
+  /* Prevent small baseline gap at the bottom (inline iframe behavior) */
+  iframe {
+    display: block;
+    height: 100%;
+    width: 100%;
+    vertical-align: top;
+  }
+
   .cm-editor .cm-scroller {
     overflow: auto;
   }

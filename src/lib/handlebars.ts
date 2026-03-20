@@ -1,5 +1,6 @@
-import Handlebars from 'handlebars';
-import type { CompileResult } from '@/types';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import Handlebars from "handlebars";
+import type { CompileResult } from "@/types";
 
 export function compileTemplate(
   html: string,
@@ -11,7 +12,7 @@ export function compileTemplate(
   } catch (err: unknown) {
     return {
       result: null,
-      error: err instanceof Error ? err.message : 'Template compilation failed',
+      error: err instanceof Error ? err.message : "Template compilation failed",
     };
   }
 }
@@ -39,7 +40,7 @@ export function compileWithLayout(
   } catch (err: unknown) {
     return {
       result: null,
-      error: err instanceof Error ? err.message : 'Template compilation failed',
+      error: err instanceof Error ? err.message : "Template compilation failed",
     };
   }
 }
@@ -60,23 +61,23 @@ export function extractVariables(template: string): string[] {
 
   // Helpers we don't want to treat as data variables.
   const builtInHelpers = new Set([
-    'each',
-    'if',
-    'unless',
-    'with',
-    'lookup',
-    'log',
+    "each",
+    "if",
+    "unless",
+    "with",
+    "lookup",
+    "log",
   ]);
 
   const isRecord = (v: unknown): v is Record<string, unknown> =>
-    typeof v === 'object' && v !== null;
+    typeof v === "object" && v !== null;
 
   const addPath = (p: unknown) => {
     if (!isRecord(p)) return;
-    const original = typeof p.original === 'string' ? p.original : undefined;
+    const original = typeof p.original === "string" ? p.original : undefined;
     if (!original) return;
-    if (original === 'this') return;
-    if (original.startsWith('@')) return; // @index, @root, @content, etc.
+    if (original === "this") return;
+    if (original.startsWith("@")) return; // @index, @root, @content, etc.
     vars.add(original);
   };
 
@@ -91,25 +92,27 @@ export function extractVariables(template: string): string[] {
     if (!isRecord(node)) return;
 
     switch (node.type) {
-      case 'Program': {
+      case "Program": {
         walk(node.body);
         return;
       }
 
-      case 'MustacheStatement': {
+      case "MustacheStatement": {
         // If it has params/hash, it's likely a helper invocation; treat params/hash as variables.
         const isHelperCall =
-          (Array.isArray(node.params) && node.params.length > 0) ||
-          (Array.isArray(node.hash?.pairs) && node.hash.pairs.length > 0) ||
-          builtInHelpers.has(node.path?.original);
+          (Array.isArray((node as any).params) &&
+            (node as any).params.length > 0) ||
+          (Array.isArray((node as any).hash?.pairs) &&
+            (node as any).hash.pairs.length > 0) ||
+          builtInHelpers.has((node as any).path?.original);
 
-        if (!isHelperCall) addPath(node.path);
-        walk(node.params);
-        walk(node.hash);
+        if (!isHelperCall) addPath((node as any).path);
+        walk((node as any).params);
+        walk((node as any).hash);
         return;
       }
 
-      case 'BlockStatement': {
+      case "BlockStatement": {
         // {{#each todos}} -> path is "each", param[0] is PathExpression "todos"
         walk(node.params);
         walk(node.hash);
@@ -118,31 +121,31 @@ export function extractVariables(template: string): string[] {
         return;
       }
 
-      case 'PartialStatement':
-      case 'PartialBlockStatement': {
+      case "PartialStatement":
+      case "PartialBlockStatement": {
         walk(node.params);
         walk(node.hash);
         walk(node.program);
         return;
       }
 
-      case 'SubExpression': {
+      case "SubExpression": {
         walk(node.params);
         walk(node.hash);
         return;
       }
 
-      case 'Hash': {
+      case "Hash": {
         walk(node.pairs);
         return;
       }
 
-      case 'HashPair': {
+      case "HashPair": {
         walk(node.value);
         return;
       }
 
-      case 'PathExpression': {
+      case "PathExpression": {
         addPath(node);
         return;
       }
@@ -175,17 +178,21 @@ export function extractVariables(template: string): string[] {
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 function placeholderForPath(path: string): string {
-  const parts = path.split('.').filter(Boolean);
+  const parts = path.split(".").filter(Boolean);
   const leaf = parts[parts.length - 1] ?? path;
   return `${leaf}_Value`;
 }
 
-function setDeepValue(obj: Record<string, unknown>, path: string, value: unknown) {
-  const parts = path.split('.').filter(Boolean);
+function setDeepValue(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown,
+) {
+  const parts = path.split(".").filter(Boolean);
   if (parts.length === 0) return;
   let cur: Record<string, unknown> = obj;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -203,8 +210,11 @@ function setDeepValue(obj: Record<string, unknown>, path: string, value: unknown
   if (!(last in cur)) cur[last] = value;
 }
 
-function ensureArrayItem(root: Record<string, unknown>, path: string): Record<string, unknown> {
-  const parts = path.split('.').filter(Boolean);
+function ensureArrayItem(
+  root: Record<string, unknown>,
+  path: string,
+): Record<string, unknown> {
+  const parts = path.split(".").filter(Boolean);
   if (parts.length === 0) return root;
   let cur: Record<string, unknown> = root;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -237,7 +247,7 @@ function ensureArrayItemInContext(
 ): Record<string, unknown> {
   // If the path is simple (no dots), it's relative to current context.
   // This fixes cases like {{#each todos}} inside {{#groupTodoDuedate}}: todos belongs to the group item.
-  if (!path.includes('.')) {
+  if (!path.includes(".")) {
     return ensureArrayItem(ctx, path);
   }
   // Dotted paths are also relative in Handlebars, but for our editor use-cases
@@ -249,27 +259,29 @@ function ensureArrayItemInContext(
  * Builds a best-effort mock data skeleton by understanding Handlebars blocks like {{#each}}.
  * This is used for auto-fill to create nested objects/arrays that match the template structure.
  */
-export function buildMockDataSkeleton(template: string): Record<string, unknown> {
+export function buildMockDataSkeleton(
+  template: string,
+): Record<string, unknown> {
   const root: Record<string, unknown> = {};
 
   const builtInHelpers = new Set([
-    'each',
-    'if',
-    'unless',
-    'with',
-    'lookup',
-    'log',
+    "each",
+    "if",
+    "unless",
+    "with",
+    "lookup",
+    "log",
   ]);
 
   const isRecord = (v: unknown): v is Record<string, unknown> =>
-    typeof v === 'object' && v !== null;
+    typeof v === "object" && v !== null;
 
   const addVar = (ctx: Record<string, unknown>, p: unknown) => {
     if (!isRecord(p)) return;
-    const original = typeof p.original === 'string' ? p.original : undefined;
+    const original = typeof p.original === "string" ? p.original : undefined;
     if (!original) return;
-    if (original === 'this') return;
-    if (original.startsWith('@')) return;
+    if (original === "this") return;
+    if (original.startsWith("@")) return;
     if (builtInHelpers.has(original)) return;
     setDeepValue(ctx, original, placeholderForPath(original));
   };
@@ -283,29 +295,35 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
     if (!isRecord(node)) return;
 
     switch (node.type) {
-      case 'Program':
+      case "Program":
         walk(node.body, ctx);
         return;
 
-      case 'MustacheStatement': {
+      case "MustacheStatement": {
         // For helpers, we don't want to add the helper name; but we do want to inspect params/hash.
         const isHelperCall =
-          (Array.isArray(node.params) && node.params.length > 0) ||
-          (Array.isArray(node.hash?.pairs) && node.hash.pairs.length > 0) ||
-          builtInHelpers.has(node.path?.original);
+          (Array.isArray((node as any).params) &&
+            (node as any).params.length > 0) ||
+          (Array.isArray((node as any).hash?.pairs) &&
+            (node as any).hash.pairs.length > 0) ||
+          builtInHelpers.has((node as any).path?.original);
 
-        if (!isHelperCall) addVar(ctx, node.path);
-        walk(node.params, ctx);
-        walk(node.hash, ctx);
+        if (!isHelperCall) addVar(ctx, (node as any).path);
+        walk((node as any).params, ctx);
+        walk((node as any).hash, ctx);
         return;
       }
 
-      case 'BlockStatement': {
-        const helper = node.path?.original;
-        if (helper === 'each' && Array.isArray(node.params) && node.params[0]?.type === 'PathExpression') {
+      case "BlockStatement": {
+        const helper = (node as any).path?.original;
+        if (
+          helper === "each" &&
+          Array.isArray((node as any).params) &&
+          (node as any).params[0]?.type === "PathExpression"
+        ) {
           // {{#each groupTodoDuedate}} OR {{#each .}}
-          const targetPath: string = node.params[0].original;
-          if (targetPath === '.' || targetPath === 'this') {
+          const targetPath: string = (node as any).params[0].original;
+          if (targetPath === "." || targetPath === "this") {
             // Iterate current context; for mock skeleton we can just walk body as-is.
             walk(node.program, ctx);
             walk(node.inverse, ctx);
@@ -321,7 +339,7 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
         // Section blocks like {{#groupTodoDuedate}} ... {{/groupTodoDuedate}}
         // In Handlebars, if the value is an array it iterates items and sets the context to each item.
         if (
-          typeof helper === 'string' &&
+          typeof helper === "string" &&
           helper.length > 0 &&
           !builtInHelpers.has(helper) &&
           (!Array.isArray(node.params) || node.params.length === 0)
@@ -340,20 +358,20 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
         return;
       }
 
-      case 'PathExpression':
+      case "PathExpression":
         addVar(ctx, node);
         return;
 
-      case 'SubExpression':
+      case "SubExpression":
         walk(node.params, ctx);
         walk(node.hash, ctx);
         return;
 
-      case 'Hash':
+      case "Hash":
         walk(node.pairs, ctx);
         return;
 
-      case 'HashPair':
+      case "HashPair":
         walk(node.value, ctx);
         return;
 

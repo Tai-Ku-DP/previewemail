@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Toaster, toast } from 'sonner';
-import { clsx } from 'clsx';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { useTemplates } from '@/hooks/useTemplates';
-import { useLayouts } from '@/hooks/useLayouts';
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Toaster, toast } from "sonner";
+import { clsx } from "clsx";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTemplates } from "@/hooks/useTemplates";
+import { useLayouts } from "@/hooks/useLayouts";
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const { templates, createTemplate, deleteTemplate, isLoading } = useTemplates();
-  const [search, setSearch] = useState('');
+  const { templates, createTemplate, deleteTemplate, isLoading } =
+    useTemplates();
+  const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'templates' | 'layouts'>('templates');
+  const [tab, setTab] = useState<"templates" | "layouts">("templates");
   const {
     layouts,
     createLayout,
@@ -23,7 +24,8 @@ export default function TemplatesPage() {
     const q = search.trim().toLowerCase();
     if (!q) return templates;
     return templates.filter(
-      (t) => t.name.toLowerCase().includes(q) || t.alias.toLowerCase().includes(q),
+      (t) =>
+        t.name.toLowerCase().includes(q) || t.alias.toLowerCase().includes(q),
     );
   }, [templates, search]);
 
@@ -31,36 +33,43 @@ export default function TemplatesPage() {
     const q = search.trim().toLowerCase();
     if (!q) return layouts;
     return layouts.filter(
-      (l) => l.name.toLowerCase().includes(q) || l.alias.toLowerCase().includes(q),
+      (l) =>
+        l.name.toLowerCase().includes(q) || l.alias.toLowerCase().includes(q),
     );
   }, [layouts, search]);
 
   const handleCreateTemplate = async () => {
     try {
-      const template = await createTemplate('Untitled Template', `template-${Date.now()}`);
-      toast.success('Template created');
+      const template = await createTemplate(
+        "Untitled Template",
+        `template-${Date.now()}`,
+      );
+      toast.success("Template created");
       navigate(`/templates/${template.id}`);
     } catch {
-      toast.error('Failed to create template');
+      toast.error("Failed to create template");
     }
   };
 
   const handleCreateLayout = async () => {
     try {
-      const layout = await createLayout('Untitled Layout', `layout-${Date.now()}`);
-      toast.success('Layout created');
+      const layout = await createLayout(
+        "Untitled Layout",
+        `layout-${Date.now()}`,
+      );
+      toast.success("Layout created");
       navigate(`/layouts/${layout.id}`);
     } catch {
-      toast.error('Failed to create layout');
+      toast.error("Failed to create layout");
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
     try {
       await deleteTemplate(id);
-      toast.success('Template deleted');
+      toast.success("Template deleted");
     } catch {
-      toast.error('Failed to delete template');
+      toast.error("Failed to delete template");
     } finally {
       setConfirmDeleteId(null);
     }
@@ -69,15 +78,15 @@ export default function TemplatesPage() {
   const handleDeleteLayout = async (id: string) => {
     try {
       await deleteLayout(id);
-      toast.success('Layout deleted');
+      toast.success("Layout deleted");
     } catch {
-      toast.error('Failed to delete layout');
+      toast.error("Failed to delete layout");
     } finally {
       setConfirmDeleteId(null);
     }
   };
 
-  const isTemplates = tab === 'templates';
+  const isTemplates = tab === "templates";
   const items = isTemplates ? filteredTemplates : filteredLayouts;
   const loading = isTemplates ? isLoading : layoutsLoading;
 
@@ -88,30 +97,34 @@ export default function TemplatesPage() {
         position="bottom-right"
         toastOptions={{
           style: {
-            fontSize: '13px',
-            borderRadius: '8px',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-subtle)',
-            color: 'var(--color-fg)',
+            fontSize: "13px",
+            borderRadius: "8px",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-bg-subtle)",
+            color: "var(--color-fg)",
           },
         }}
       />
 
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight text-fg">PreviewMail</span>
+          <span className="text-sm font-semibold tracking-tight text-fg">
+            PreviewMail
+          </span>
           <span className="text-fg-faint">/</span>
           <span className="text-[13px] font-medium text-fg-secondary">
-            {isTemplates ? 'Templates' : 'Layouts'}
+            {isTemplates ? "Templates" : "Layouts"}
           </span>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => void (isTemplates ? handleCreateTemplate() : handleCreateLayout())}
+            onClick={() =>
+              void (isTemplates ? handleCreateTemplate() : handleCreateLayout())
+            }
             className="inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
           >
-            New {isTemplates ? 'template' : 'layout'}
+            New {isTemplates ? "template" : "layout"}
           </button>
           <ThemeToggle />
         </div>
@@ -122,15 +135,15 @@ export default function TemplatesPage() {
           <div className="inline-flex overflow-hidden rounded-md border border-border bg-bg">
             <button
               onClick={() => {
-                setTab('templates');
-                setSearch('');
+                setTab("templates");
+                setSearch("");
                 setConfirmDeleteId(null);
               }}
               className={clsx(
-                'h-8 px-3 text-xs font-medium transition-colors',
-                tab === 'templates'
-                  ? 'bg-bg-subtle text-fg'
-                  : 'text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary',
+                "h-8 px-3 text-xs font-medium transition-colors",
+                tab === "templates"
+                  ? "bg-bg-subtle text-fg"
+                  : "text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary",
               )}
               aria-label="Templates tab"
             >
@@ -138,15 +151,15 @@ export default function TemplatesPage() {
             </button>
             <button
               onClick={() => {
-                setTab('layouts');
-                setSearch('');
+                setTab("layouts");
+                setSearch("");
                 setConfirmDeleteId(null);
               }}
               className={clsx(
-                'h-8 px-3 text-xs font-medium transition-colors',
-                tab === 'layouts'
-                  ? 'bg-bg-subtle text-fg'
-                  : 'text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary',
+                "h-8 px-3 text-xs font-medium transition-colors",
+                tab === "layouts"
+                  ? "bg-bg-subtle text-fg"
+                  : "text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary",
               )}
               aria-label="Layouts tab"
             >
@@ -158,10 +171,10 @@ export default function TemplatesPage() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-fg">
-              Your {isTemplates ? 'templates' : 'layouts'}
+              Your {isTemplates ? "templates" : "layouts"}
             </p>
             <p className="mt-0.5 text-xs text-fg-muted">
-              Click a {isTemplates ? 'template' : 'layout'} to open the editor.
+              Click a {isTemplates ? "template" : "layout"} to open the editor.
             </p>
           </div>
           <div className="w-[320px] max-w-full">
@@ -183,8 +196,8 @@ export default function TemplatesPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${isTemplates ? 'templates' : 'layouts'}...`}
-                aria-label={`Search ${isTemplates ? 'templates' : 'layouts'}`}
+                placeholder={`Search ${isTemplates ? "templates" : "layouts"}...`}
+                aria-label={`Search ${isTemplates ? "templates" : "layouts"}`}
                 className="h-9 w-full rounded-md border border-border bg-bg pl-8 pr-3 text-xs text-fg placeholder:text-fg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
               />
             </div>
@@ -197,16 +210,21 @@ export default function TemplatesPage() {
           ) : items.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-[13px] font-medium text-fg">
-                No {isTemplates ? 'templates' : 'layouts'}
+                No {isTemplates ? "templates" : "layouts"}
               </p>
               <p className="mt-1 text-xs text-fg-muted">
-                Create your first {isTemplates ? 'template' : 'layout'} to start editing.
+                Create your first {isTemplates ? "template" : "layout"} to start
+                editing.
               </p>
               <button
-                onClick={() => void (isTemplates ? handleCreateTemplate() : handleCreateLayout())}
+                onClick={() =>
+                  void (isTemplates
+                    ? handleCreateTemplate()
+                    : handleCreateLayout())
+                }
                 className="mt-4 inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
               >
-                New {isTemplates ? 'template' : 'layout'}
+                New {isTemplates ? "template" : "layout"}
               </button>
             </div>
           ) : (
@@ -217,7 +235,9 @@ export default function TemplatesPage() {
                   className="group relative cursor-pointer px-4 py-3 transition-colors hover:bg-bg-subtle"
                   onClick={() =>
                     navigate(
-                      isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`,
+                      isTemplates
+                        ? `/templates/${item.id}`
+                        : `/layouts/${item.id}`,
                     )
                   }
                 >
@@ -255,8 +275,8 @@ export default function TemplatesPage() {
                     ) : (
                       <button
                         className={clsx(
-                          'hidden h-7 items-center rounded-md px-2 text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-danger',
-                          'group-hover:inline-flex',
+                          "hidden h-7 items-center rounded-md px-2 text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-danger",
+                          "group-hover:inline-flex",
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -277,4 +297,3 @@ export default function TemplatesPage() {
     </div>
   );
 }
-
