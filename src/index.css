@@ -68,6 +68,18 @@
     min-height: 100vh;
   }
 
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
   /* Focus ring utility */
   *:focus-visible {
     outline: none;
@@ -78,32 +90,18 @@
   }
 
   /* CodeMirror integration */
+  .cm-editor .cm-gutters {
+    border-right: 1px solid var(--color-border) !important;
+    /* background: transparent !important; */
+  }
+
   .cm-editor {
-    height: 100% !important;
-    font-size: 13px !important;
-    background: #3b404a !important;
+    height: 100%;
   }
-  .cm-editor .cm-content {
-    caret-color: var(--color-accent) !important;
-  }
-  .cm-editor .cm-cursor {
-    border-left-color: var(--color-accent) !important;
-  }
+
   .cm-editor .cm-scroller {
     overflow: auto;
   }
-  .cm-editor .cm-gutters {
-    border-right: 1px solid var(--color-border) !important;
-    background: transparent !important;
-  }
-  /* .cm-editor .cm-activeLineGutter, */
-  /* .cm-editor .cm-activeLine {
-    background: var(--color-bg-subtle) !important;
-  }
-  .cm-editor.cm-focused {
-    outline: none !important;
-    box-shadow: none !important;
-  } */
 
   /* Scrollbar (Webkit) */
   ::-webkit-scrollbar {

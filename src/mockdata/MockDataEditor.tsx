@@ -33,7 +33,7 @@ export const MockDataEditor = ({
 
       <div
         className={clsx(
-          'min-h-0 flex-1 transition-shadow',
+          'min-h-0 flex-1 overflow-hidden transition-shadow',
           error ? 'ring-1 ring-danger/40 ring-inset' : '',
         )}
       >

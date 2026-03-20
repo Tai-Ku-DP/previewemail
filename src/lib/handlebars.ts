@@ -68,15 +68,19 @@ export function extractVariables(template: string): string[] {
     'log',
   ]);
 
-  const addPath = (p: any) => {
-    const original: string | undefined = p?.original;
+  const isRecord = (v: unknown): v is Record<string, unknown> =>
+    typeof v === 'object' && v !== null;
+
+  const addPath = (p: unknown) => {
+    if (!isRecord(p)) return;
+    const original = typeof p.original === 'string' ? p.original : undefined;
     if (!original) return;
     if (original === 'this') return;
     if (original.startsWith('@')) return; // @index, @root, @content, etc.
     vars.add(original);
   };
 
-  const walk = (node: any) => {
+  const walk = (node: unknown) => {
     if (!node) return;
 
     // Arrays (e.g. program.body)
@@ -84,6 +88,7 @@ export function extractVariables(template: string): string[] {
       for (const n of node) walk(n);
       return;
     }
+    if (!isRecord(node)) return;
 
     switch (node.type) {
       case 'Program': {
@@ -149,6 +154,10 @@ export function extractVariables(template: string): string[] {
         walk(node.inverse);
         walk(node.params);
         walk(node.hash);
+        walk(node.path);
+        walk(node.value);
+        walk(node.pairs);
+        return;
       }
     }
   };
@@ -252,8 +261,12 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
     'log',
   ]);
 
-  const addVar = (ctx: Record<string, unknown>, p: any) => {
-    const original: string | undefined = p?.original;
+  const isRecord = (v: unknown): v is Record<string, unknown> =>
+    typeof v === 'object' && v !== null;
+
+  const addVar = (ctx: Record<string, unknown>, p: unknown) => {
+    if (!isRecord(p)) return;
+    const original = typeof p.original === 'string' ? p.original : undefined;
     if (!original) return;
     if (original === 'this') return;
     if (original.startsWith('@')) return;
@@ -261,12 +274,13 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
     setDeepValue(ctx, original, placeholderForPath(original));
   };
 
-  const walk = (node: any, ctx: Record<string, unknown>) => {
+  const walk = (node: unknown, ctx: Record<string, unknown>) => {
     if (!node) return;
     if (Array.isArray(node)) {
       for (const n of node) walk(n, ctx);
       return;
     }
+    if (!isRecord(node)) return;
 
     switch (node.type) {
       case 'Program':
@@ -349,6 +363,10 @@ export function buildMockDataSkeleton(template: string): Record<string, unknown>
         walk(node.inverse, ctx);
         walk(node.params, ctx);
         walk(node.hash, ctx);
+        walk(node.path, ctx);
+        walk(node.value, ctx);
+        walk(node.pairs, ctx);
+        return;
     }
   };
 

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { html } from "@codemirror/lang-html";
+import { autoCloseTags, html } from "@codemirror/lang-html";
 import { indentUnit } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { lintGutter } from "@codemirror/lint";
@@ -21,14 +21,18 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
     () =>
       tab === "html"
         ? [
-            html({ autoCloseTags: true }),
+            html({
+              autoCloseTags: true,
+              matchClosingTags: true, // thêm dòng này
+            }),
+            autoCloseTags,
             indentUnit.of("  "),
             EditorView.lineWrapping,
             lintGutter(),
             htmlLinter,
           ]
         : [indentUnit.of("  "), EditorView.lineWrapping],
-    [tab],
+    [tab]
   );
 
   const handleChange = useCallback(
@@ -36,7 +40,7 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => onChange(val), 200);
     },
-    [onChange],
+    [onChange]
   );
 
   return (

@@ -1,59 +1,66 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Toaster, toast } from 'sonner';
-import { clsx } from 'clsx';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { SettingsModal } from '@/components/SettingsModal';
-import { SendTestModal } from '@/components/SendTestModal';
-import { EditorPanel } from '@/editor/EditorPanel';
-import { MockDataEditor } from '@/mockdata/MockDataEditor';
-import { useTemplates } from '@/hooks/useTemplates';
-import { useLayouts } from '@/hooks/useLayouts';
-import { useMockData } from '@/hooks/useMockData';
-import { usePreview } from '@/hooks/usePreview';
-import { useSettings } from '@/hooks/useSettings';
-import { useEditorStore } from '@/stores/editorStore';
-import { formatHtml, formatJson } from '@/lib/formatter';
-import { buildMockDataSkeleton } from '@/lib/handlebars';
-import type { Layout } from '@/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Toaster, toast } from "sonner";
+import { clsx } from "clsx";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { SettingsModal } from "@/components/SettingsModal";
+import { SendTestModal } from "@/components/SendTestModal";
+import { EditorPanel } from "@/editor/EditorPanel";
+import { MockDataEditor } from "@/mockdata/MockDataEditor";
+import { useTemplates } from "@/hooks/useTemplates";
+import { useLayouts } from "@/hooks/useLayouts";
+import { useMockData } from "@/hooks/useMockData";
+import { usePreview } from "@/hooks/usePreview";
+import { useSettings } from "@/hooks/useSettings";
+import { useEditorStore } from "@/stores/editorStore";
+import { formatHtml, formatJson } from "@/lib/formatter";
+import { buildMockDataSkeleton } from "@/lib/handlebars";
+import type { Layout } from "@/types";
 
 export default function TemplateEditorPage() {
   const navigate = useNavigate();
   const { templateId } = useParams<{ templateId: string }>();
 
-  const {
-    templates,
-    selectedTemplate,
-    selectTemplate,
-    updateTemplate,
-  } = useTemplates();
+  const { templates, selectedTemplate, selectTemplate, updateTemplate } =
+    useTemplates();
 
   const { layouts, getLayoutById } = useLayouts();
 
   const templateEditorMainTab = useEditorStore((s) => s.templateEditorMainTab);
-  const setTemplateEditorMainTab = useEditorStore((s) => s.setTemplateEditorMainTab);
-  const toggleTemplateEditorMainTab = useEditorStore((s) => s.toggleTemplateEditorMainTab);
+  const setTemplateEditorMainTab = useEditorStore(
+    (s) => s.setTemplateEditorMainTab,
+  );
+  const toggleTemplateEditorMainTab = useEditorStore(
+    (s) => s.toggleTemplateEditorMainTab,
+  );
   const editorMaximized = useEditorStore((s) => s.editorMaximized);
   const previewMockDataOpen = useEditorStore((s) => s.previewMockDataOpen);
   const togglePreviewMockData = useEditorStore((s) => s.togglePreviewMockData);
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
+  const rightPanelTab = useEditorStore((s) => s.rightPanelTab);
   const isDirty = useEditorStore((s) => s.isDirty);
   const setDirty = useEditorStore((s) => s.setDirty);
-  const { settings, isConfigured, save: saveSettings, clear: clearSettings } = useSettings();
+  const {
+    settings,
+    isConfigured,
+    save: saveSettings,
+    clear: clearSettings,
+  } = useSettings();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sendTestOpen, setSendTestOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Template editing state
-  const [htmlBody, setHtmlBody] = useState('');
-  const [textBody, setTextBody] = useState('');
-  const [subject, setSubject] = useState('');
-  const [templateName, setTemplateName] = useState('');
+  const [htmlBody, setHtmlBody] = useState("");
+  const [textBody, setTextBody] = useState("");
+  const [subject, setSubject] = useState("");
+  const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
-  const [mockDataJson, setMockDataJson] = useState('{}');
+  const [mockDataJson, setMockDataJson] = useState("{}");
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -65,15 +72,17 @@ export default function TemplateEditorPage() {
   // Sync template state when selection changes
   useEffect(() => {
     if (!selectedTemplate) return;
-    setHtmlBody(selectedTemplate.htmlBody);
-    setTextBody(selectedTemplate.textBody);
-    setSubject(selectedTemplate.subject);
-    setTemplateName(selectedTemplate.name);
-    setTemplateLayoutId(selectedTemplate.layoutId);
-    const json = JSON.stringify(selectedTemplate.mockData, null, 2);
-    setMockDataJson(json);
-    reset(selectedTemplate.mockData);
-    setDirty(false);
+    queueMicrotask(() => {
+      setHtmlBody(selectedTemplate.htmlBody);
+      setTextBody(selectedTemplate.textBody);
+      setSubject(selectedTemplate.subject);
+      setTemplateName(selectedTemplate.name);
+      setTemplateLayoutId(selectedTemplate.layoutId);
+      const json = JSON.stringify(selectedTemplate.mockData, null, 2);
+      setMockDataJson(json);
+      reset(selectedTemplate.mockData);
+      setDirty(false);
+    });
   }, [selectedTemplate, reset, setDirty]);
 
   const activeLayout: Layout | undefined = useMemo(() => {
@@ -98,19 +107,25 @@ export default function TemplateEditorPage() {
   );
 
   useEffect(() => {
-    if (templateEditorMainTab !== 'preview') return;
+    if (templateEditorMainTab !== "preview") return;
 
     const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' && v !== null && !Array.isArray(v);
+      typeof v === "object" && v !== null && !Array.isArray(v);
 
-    const mergeDeep = (target: Record<string, unknown>, source: Record<string, unknown>) => {
+    const mergeDeep = (
+      target: Record<string, unknown>,
+      source: Record<string, unknown>,
+    ) => {
       for (const [k, v] of Object.entries(source)) {
         const existing = target[k];
         if (Array.isArray(v)) {
           if (!Array.isArray(existing) || existing.length === 0) {
             target[k] = v;
           } else if (isPlainObject(v[0]) && isPlainObject(existing[0])) {
-            mergeDeep(existing[0] as Record<string, unknown>, v[0] as Record<string, unknown>);
+            mergeDeep(
+              existing[0] as Record<string, unknown>,
+              v[0] as Record<string, unknown>,
+            );
           }
         } else if (isPlainObject(v)) {
           if (!isPlainObject(existing)) target[k] = {};
@@ -133,28 +148,43 @@ export default function TemplateEditorPage() {
     mergeDeep(filled, skeleton);
     const nextJson = JSON.stringify(filled, null, 2);
     if (nextJson !== mockDataJson) {
-      setMockDataJson(nextJson);
-      updateFromJson(nextJson);
+      queueMicrotask(() => {
+        setMockDataJson(nextJson);
+        updateFromJson(nextJson);
+      });
     }
   }, [templateEditorMainTab, htmlBody, mockDataJson, updateFromJson]);
 
-  const handleSaveTemplate = useCallback(async () => {
+  const handleSaveTemplate = useCallback(async (overrides?: {
+    htmlBody?: string;
+    mockData?: Record<string, unknown>;
+    mockDataJson?: string;
+  }) => {
     if (!selectedTemplate) return;
     try {
+      const nextHtmlBody = overrides?.htmlBody ?? htmlBody;
+      const nextMockData = overrides?.mockData ?? mockData;
       await updateTemplate(selectedTemplate.id, {
         name: templateName,
-        htmlBody,
+        htmlBody: nextHtmlBody,
         textBody,
         subject,
         layoutId: templateLayoutId,
-        mockData,
+        mockData: nextMockData,
       });
-      toast.success('Template saved');
+      if (overrides?.htmlBody && overrides.htmlBody !== htmlBody) {
+        setHtmlBody(overrides.htmlBody);
+      }
+      if (overrides?.mockDataJson && overrides.mockDataJson !== mockDataJson) {
+        setMockDataJson(overrides.mockDataJson);
+        updateFromJson(overrides.mockDataJson);
+      }
+      toast.success("Template saved");
       setDirty(false);
       setJustSaved(true);
       window.setTimeout(() => setJustSaved(false), 2000);
     } catch {
-      toast.error('Failed to save template');
+      toast.error("Failed to save template");
     }
   }, [
     selectedTemplate,
@@ -166,12 +196,42 @@ export default function TemplateEditorPage() {
     mockData,
     updateTemplate,
     setDirty,
+    mockDataJson,
+    updateFromJson,
+  ]);
+
+  useEffect(() => {
+    if (!isDirty || rightPanelTab === "mockdata") {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+      return;
+    }
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      void handleSaveTemplate();
+    }, 4000);
+
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    };
+  }, [
+    isDirty,
+    rightPanelTab,
+    handleSaveTemplate,
+    htmlBody,
+    textBody,
+    subject,
+    templateName,
+    templateLayoutId,
+    mockDataJson,
   ]);
 
   const handleSendTest = useCallback(() => {
     if (!isConfigured) return;
     if (!renderedHtml) {
-      toast.error('Template body is empty');
+      toast.error("Template body is empty");
       return;
     }
     setSendTestOpen(true);
@@ -180,20 +240,12 @@ export default function TemplateEditorPage() {
   const formatInProgress = useRef(false);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && useEditorStore.getState().editorMaximized) {
+      if (e.key === "Escape" && useEditorStore.getState().editorMaximized) {
         e.preventDefault();
         useEditorStore.getState().setEditorMaximized(false);
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        void handleSaveTemplate();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        toggleTemplateEditorMainTab();
-      }
-      if (e.shiftKey && e.altKey && e.key === 'F') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         if (formatInProgress.current) return;
         formatInProgress.current = true;
@@ -201,31 +253,83 @@ export default function TemplateEditorPage() {
         const editorTab = useEditorStore.getState().editorTab;
         const rightTab = useEditorStore.getState().rightPanelTab;
 
-        if (rightTab === 'mockdata') {
+        const save = async () => {
+          if (rightTab === "mockdata") {
+            try {
+              const formattedJson = formatJson(mockDataJson);
+              const parsed = JSON.parse(formattedJson) as Record<string, unknown>;
+              await handleSaveTemplate({
+                mockData: parsed,
+                mockDataJson: formattedJson,
+              });
+            } catch {
+              await handleSaveTemplate();
+            }
+            return;
+          }
+
+          if (editorTab === "html" && htmlBody.trim()) {
+            try {
+              const formattedHtml = await formatHtml(htmlBody);
+              await handleSaveTemplate({ htmlBody: formattedHtml });
+            } catch {
+              await handleSaveTemplate();
+            }
+            return;
+          }
+
+          await handleSaveTemplate();
+        };
+
+        void save().finally(() => {
+          formatInProgress.current = false;
+        });
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+        e.preventDefault();
+        toggleTemplateEditorMainTab();
+      }
+      if (e.shiftKey && e.altKey && e.key === "F") {
+        e.preventDefault();
+        if (formatInProgress.current) return;
+        formatInProgress.current = true;
+
+        const editorTab = useEditorStore.getState().editorTab;
+        const rightTab = useEditorStore.getState().rightPanelTab;
+
+        if (rightTab === "mockdata") {
           try {
             const formatted = formatJson(mockDataJson);
             handleMockDataChange(formatted);
-            toast.success('JSON formatted');
+            toast.success("JSON formatted");
           } catch {
-            toast.error('Cannot format invalid JSON');
+            toast.error("Cannot format invalid JSON");
           }
           formatInProgress.current = false;
-        } else if (editorTab === 'html') {
+        } else if (editorTab === "html") {
           void formatHtml(htmlBody)
             .then((formatted) => {
               setHtmlBody(formatted);
-              toast.success('HTML formatted');
+              toast.success("HTML formatted");
             })
-            .catch(() => toast.error('Format failed — check Handlebars syntax'))
-            .finally(() => { formatInProgress.current = false; });
+            .catch(() => toast.error("Format failed — check Handlebars syntax"))
+            .finally(() => {
+              formatInProgress.current = false;
+            });
         } else {
           formatInProgress.current = false;
         }
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleSaveTemplate, toggleTemplateEditorMainTab, mockDataJson, handleMockDataChange, htmlBody]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [
+    handleSaveTemplate,
+    toggleTemplateEditorMainTab,
+    mockDataJson,
+    handleMockDataChange,
+    htmlBody,
+  ]);
 
   if (!templateId) return <Navigate to="/templates" replace />;
 
@@ -243,11 +347,11 @@ export default function TemplateEditorPage() {
         position="bottom-right"
         toastOptions={{
           style: {
-            fontSize: '13px',
-            borderRadius: '8px',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-subtle)',
-            color: 'var(--color-fg)',
+            fontSize: "13px",
+            borderRadius: "8px",
+            border: "1px solid var(--color-border)",
+            background: "var(--color-bg-subtle)",
+            color: "var(--color-fg)",
           },
         }}
       />
@@ -274,7 +378,7 @@ export default function TemplateEditorPage() {
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
-            onClick={() => navigate('/templates')}
+            onClick={() => navigate("/templates")}
             className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
             aria-label="Back to templates"
           >
@@ -313,7 +417,7 @@ export default function TemplateEditorPage() {
         <div className="flex shrink-0 items-center gap-1.5">
           {isEditingTemplate && (
             <select
-              value={templateLayoutId ?? ''}
+              value={templateLayoutId ?? ""}
               onChange={(e) => {
                 setTemplateLayoutId(e.target.value || null);
                 setDirty(true);
@@ -335,16 +439,16 @@ export default function TemplateEditorPage() {
               onClick={handleSendTest}
               disabled={!isConfigured}
               className={clsx(
-                'inline-flex h-8 items-center rounded-md border border-border px-3 text-[13px] font-medium transition-colors',
+                "inline-flex h-8 items-center rounded-md border border-border px-3 text-[13px] font-medium transition-colors",
                 isConfigured
-                  ? 'text-fg-secondary hover:bg-bg-subtle hover:text-fg'
-                  : 'cursor-not-allowed text-fg-muted opacity-60',
+                  ? "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
+                  : "cursor-not-allowed text-fg-muted opacity-60",
               )}
               aria-label="Send test email"
               title={
                 isConfigured
-                  ? 'Send test email'
-                  : 'Configure AWS SES in Settings to enable sending tests'
+                  ? "Send test email"
+                  : "Configure AWS SES in Settings to enable sending tests"
               }
             >
               Send Test
@@ -358,7 +462,7 @@ export default function TemplateEditorPage() {
               aria-label="Save"
               title="Save (Ctrl+S / Cmd+S)"
             >
-              {justSaved && !isDirty ? 'Saved ✓' : 'Save'}
+              {justSaved && !isDirty ? "Saved ✓" : "Save"}
             </button>
           )}
 
@@ -398,24 +502,24 @@ export default function TemplateEditorPage() {
             <div className="flex h-10 shrink-0 items-end justify-between border-b border-border bg-bg px-2">
               <div className="flex">
                 <button
-                  onClick={() => setTemplateEditorMainTab('edit')}
+                  onClick={() => setTemplateEditorMainTab("edit")}
                   className={clsx(
-                    'relative h-10 px-3 text-[13px] font-medium transition-colors',
-                    templateEditorMainTab === 'edit'
-                      ? 'text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg'
-                      : 'text-fg-muted hover:text-fg-secondary',
+                    "relative h-10 px-3 text-[13px] font-medium transition-colors",
+                    templateEditorMainTab === "edit"
+                      ? "text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg"
+                      : "text-fg-muted hover:text-fg-secondary",
                   )}
                   aria-label="Edit tab"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => setTemplateEditorMainTab('preview')}
+                  onClick={() => setTemplateEditorMainTab("preview")}
                   className={clsx(
-                    'relative h-10 px-3 text-[13px] font-medium transition-colors',
-                    templateEditorMainTab === 'preview'
-                      ? 'text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg'
-                      : 'text-fg-muted hover:text-fg-secondary',
+                    "relative h-10 px-3 text-[13px] font-medium transition-colors",
+                    templateEditorMainTab === "preview"
+                      ? "text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg"
+                      : "text-fg-muted hover:text-fg-secondary",
                   )}
                   aria-label="Preview tab"
                 >
@@ -426,53 +530,69 @@ export default function TemplateEditorPage() {
               <div className="mb-1.5 mr-1 text-[11px] text-fg-muted">
                 <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
                   ⌘/
-                </kbd>{' '}
+                </kbd>{" "}
                 switch tab
               </div>
             </div>
 
             <div className="min-h-0 flex-1">
-              {templateEditorMainTab === 'edit' ? (
-              <EditorPanel
-                htmlBody={htmlBody}
-                textBody={textBody}
-                onHtmlChange={(v) => {
-                  setHtmlBody(v);
-                  setDirty(true);
-                }}
-                onTextChange={(v) => {
-                  setTextBody(v);
-                  setDirty(true);
-                }}
-              />
+              {templateEditorMainTab === "edit" ? (
+                <EditorPanel
+                  htmlBody={htmlBody}
+                  textBody={textBody}
+                  onHtmlChange={(v) => {
+                    setHtmlBody(v);
+                    setDirty(true);
+                  }}
+                  onTextChange={(v) => {
+                    setTextBody(v);
+                    setDirty(true);
+                  }}
+                />
               ) : (
                 <div
                   className={clsx(
-                    'flex h-full min-w-0 bg-bg-subtle',
-                    editorMaximized && 'pointer-events-none opacity-60',
+                    "flex h-full min-w-0 bg-bg-subtle",
+                    editorMaximized && "pointer-events-none",
                   )}
                   ref={previewSplitRef}
                 >
                   <div
                     className="flex min-w-0 flex-col"
-                    style={{ flexBasis: previewMockDataOpen ? `${previewSplit * 100}%` : '100%' }}
+                    style={{
+                      flexBasis: previewMockDataOpen
+                        ? `${previewSplit * 100}%`
+                        : "100%",
+                    }}
                   >
                     <div className="flex h-10 items-end justify-between border-b border-border bg-bg px-2">
-                      <div className="px-3 text-[12px] text-fg-muted">Email Preview</div>
+                      <div className="px-3 text-[12px] text-fg-muted">
+                        Email Preview
+                      </div>
                       <button
                         onClick={togglePreviewMockData}
                         className="mb-1.5 mr-1 inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-                        aria-label={previewMockDataOpen ? 'Hide mock data' : 'Show mock data'}
+                        aria-label={
+                          previewMockDataOpen
+                            ? "Hide mock data"
+                            : "Show mock data"
+                        }
                       >
-                        {previewMockDataOpen ? 'Hide mock data' : 'Show mock data'}
+                        {previewMockDataOpen
+                          ? "Hide mock data"
+                          : "Show mock data"}
                       </button>
                     </div>
 
                     <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
                       {compiledSubject && (
                         <div className="shrink-0 border-b border-border bg-bg px-3 py-2">
-                          <span className="text-[11px] font-medium text-fg-muted">Subject</span>
-                          <p className="mt-0.5 text-[13px] text-fg">{compiledSubject}</p>
+                          <span className="text-[11px] font-medium text-fg-muted">
+                            Subject
+                          </span>
+                          <p className="mt-0.5 text-[13px] text-fg">
+                            {compiledSubject}
+                          </p>
                         </div>
                       )}
 
@@ -483,7 +603,7 @@ export default function TemplateEditorPage() {
                       )}
 
                       <iframe
-                        srcDoc={renderedHtml ?? ''}
+                        srcDoc={renderedHtml ?? ""}
                         sandbox="allow-same-origin"
                         title="Email Preview"
                         className="min-h-0 flex-1 w-full border-0 bg-white"
@@ -512,15 +632,19 @@ export default function TemplateEditorPage() {
 
                           const onUp = (upEvent: PointerEvent) => {
                             const target = upEvent.target as HTMLElement;
-                            if (target && target.hasPointerCapture && target.hasPointerCapture(upEvent.pointerId)) {
+                            if (
+                              target &&
+                              target.hasPointerCapture &&
+                              target.hasPointerCapture(upEvent.pointerId)
+                            ) {
                               target.releasePointerCapture(upEvent.pointerId);
                             }
-                            window.removeEventListener('pointermove', onMove);
-                            window.removeEventListener('pointerup', onUp);
+                            window.removeEventListener("pointermove", onMove);
+                            window.removeEventListener("pointerup", onUp);
                           };
 
-                          window.addEventListener('pointermove', onMove);
-                          window.addEventListener('pointerup', onUp);
+                          window.addEventListener("pointermove", onMove);
+                          window.addEventListener("pointerup", onUp);
                         }}
                         aria-label="Resize preview and mock data panels"
                       >
@@ -547,8 +671,12 @@ export default function TemplateEditorPage() {
         ) : (
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
-              <p className="text-[13px] font-medium text-fg">Loading template…</p>
-              <p className="mt-1 text-xs text-fg-muted">If this takes too long, go back to Templates.</p>
+              <p className="text-[13px] font-medium text-fg">
+                Loading template…
+              </p>
+              <p className="mt-1 text-xs text-fg-muted">
+                If this takes too long, go back to Templates.
+              </p>
             </div>
           </div>
         )}
@@ -556,4 +684,3 @@ export default function TemplateEditorPage() {
     </div>
   );
 }
-
