@@ -1,8 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import TemplatesPage from '@/pages/TemplatesPage';
-import TemplateEditorPage from '@/pages/TemplateEditorPage';
-import LayoutEditorPage from '@/pages/LayoutEditorPage';
-import HomePage from '@/pages/index';
+import TemplatesPage from '@/views/TemplatesPage';
+import TemplateEditorPage from '@/views/TemplateEditorPage';
+import LayoutEditorPage from '@/views/LayoutEditorPage';
+import HomePage from '@/views/index';
 
 export default function App() {
   return (
