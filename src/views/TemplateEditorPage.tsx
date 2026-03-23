@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
+import { Settings } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsModal } from "@/components/SettingsModal";
 import { SendTestModal } from "@/components/SendTestModal";
@@ -394,7 +396,7 @@ export default function TemplateEditorPage() {
           {isEditingTemplate && (
             <>
               <span className="text-fg-faint">/</span>
-              <input
+              <Input
                 type="text"
                 value={templateName}
                 onChange={(e) => {
@@ -403,11 +405,11 @@ export default function TemplateEditorPage() {
                   setIsMockDataDirty(false);
                   setDirty(true);
                 }}
-                className="h-7 w-48 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                className="h-7 w-48 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
                 aria-label="Template name"
               />
               <span className="text-fg-faint">&middot;</span>
-              <input
+              <Input
                 type="text"
                 value={subject}
                 onChange={(e) => {
@@ -417,7 +419,7 @@ export default function TemplateEditorPage() {
                   setDirty(true);
                 }}
                 placeholder="Subject line {{variables}}"
-                className="h-7 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary placeholder:text-fg-muted transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                className="h-7 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary shadow-none placeholder:text-fg-muted transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
                 aria-label="Email subject"
               />
             </>
@@ -484,24 +486,7 @@ export default function TemplateEditorPage() {
               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
               aria-label="Settings"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <Settings className="h-4 w-4" />
             </button>
             <ThemeToggle />
           </div>
@@ -595,7 +580,7 @@ export default function TemplateEditorPage() {
 
                     <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
                       {compiledSubject && (
-                        <div className="shrink-0 border-b border-border bg-bg px-3 py-2">
+                        <div className="shrink-0 border-b border-border sbg-bg px-3 py-2">
                           <span className="text-[11px] font-medium text-fg-muted">
                             Subject
                           </span>
@@ -604,13 +589,7 @@ export default function TemplateEditorPage() {
                           </p>
                         </div>
                       )}
-
-                      {compileError && (
-                        <div className="shrink-0 border-b border-danger/20 bg-danger/5 px-3 py-2 text-[13px] text-danger">
-                          {compileError}
-                        </div>
-                      )}
-
+                      
                       <iframe
                         srcDoc={previewSrcDoc}
                         sandbox="allow-same-origin"

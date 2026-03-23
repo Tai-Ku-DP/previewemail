@@ -5,6 +5,11 @@ import { clsx } from "clsx";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
@@ -90,6 +95,79 @@ export default function TemplatesPage() {
   const items = isTemplates ? filteredTemplates : filteredLayouts;
   const loading = isTemplates ? isLoading : layoutsLoading;
 
+  const columns: ColumnDef<any>[] = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium text-fg">
+              {row.original.name}
+            </p>
+            <p className="mt-0.5 truncate text-[11px] text-fg-muted">
+              {row.original.alias}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const item = row.original;
+          if (confirmDeleteId === item.id) {
+            return (
+              <div
+                className="flex items-center justify-end gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() =>
+                    void (isTemplates
+                      ? handleDeleteTemplate(item.id)
+                      : handleDeleteLayout(item.id))
+                  }
+                  className="h-7 rounded-md bg-danger px-2.5 text-[12px] font-medium text-white transition-colors hover:bg-danger-hover"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="h-7 rounded-md bg-bg-muted px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-inset"
+                >
+                  Cancel
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex justify-end">
+              <button
+                className={clsx(
+                  "invisible h-7 items-center rounded-md px-2 text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-danger",
+                  "group-hover:visible inline-flex",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDeleteId(item.id);
+                }}
+                aria-label={`Delete ${item.name}`}
+              >
+                Delete
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [
+      confirmDeleteId,
+      isTemplates,
+    ]
+  );
+
   return (
     <div className="flex h-screen flex-col bg-bg">
       <Toaster
@@ -130,69 +208,33 @@ export default function TemplatesPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-4 py-5">
-        <div className="flex items-center gap-2">
-          <div className="inline-flex overflow-hidden rounded-md border border-border bg-bg">
-            <button
-              onClick={() => {
-                setTab("templates");
-                setSearch("");
-                setConfirmDeleteId(null);
-              }}
-              className={clsx(
-                "h-8 px-3 text-xs font-medium transition-colors",
-                tab === "templates"
-                  ? "bg-bg-subtle text-fg"
-                  : "text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary",
-              )}
-              aria-label="Templates tab"
-            >
-              Templates
-            </button>
-            <button
-              onClick={() => {
-                setTab("layouts");
-                setSearch("");
-                setConfirmDeleteId(null);
-              }}
-              className={clsx(
-                "h-8 px-3 text-xs font-medium transition-colors",
-                tab === "layouts"
-                  ? "bg-bg-subtle text-fg"
-                  : "text-fg-muted hover:bg-bg-subtle hover:text-fg-secondary",
-              )}
-              aria-label="Layouts tab"
-            >
-              Layouts
-            </button>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-fg">
-              Your {isTemplates ? "templates" : "layouts"}
-            </p>
-            <p className="mt-0.5 text-xs text-fg-muted">
-              Click a {isTemplates ? "template" : "layout"} to open the editor.
-            </p>
-          </div>
-          <div className="w-[320px] max-w-full">
+
+      <main className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-4 py-5">
+
+        <div className="flex items-center gap-2 justify-between">
+          <Tabs
+            value={tab}
+            onValueChange={(val) => {
+              setTab(val as "templates" | "layouts");
+              setSearch("");
+              setConfirmDeleteId(null);
+            }}
+          >
+            <TabsList className="h-9">
+              <TabsTrigger value="templates" className="text-xs px-4">
+                Templates
+              </TabsTrigger>
+              <TabsTrigger value="layouts" className="text-xs px-4">
+                Layouts
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+           <div className="w-[320px] max-w-full">
             <div className="relative">
-              <svg
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                />
-              </svg>
-              <input
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
+              <Input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -204,7 +246,7 @@ export default function TemplatesPage() {
           </div>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-bg">
+        <div className="mt-4 min-h-0 flex-1 overflow-auto">
           {loading ? (
             <div className="p-4 text-xs text-fg-muted">Loading…</div>
           ) : items.length === 0 ? (
@@ -228,69 +270,15 @@ export default function TemplatesPage() {
               </button>
             </div>
           ) : (
-            <ul className="divide-y divide-border-subtle">
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className="group relative cursor-pointer px-4 py-3 transition-colors hover:bg-bg-subtle"
-                  onClick={() =>
-                    navigate(
-                      isTemplates
-                        ? `/templates/${item.id}`
-                        : `/layouts/${item.id}`,
-                    )
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-fg">
-                        {item.name}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-fg-muted">
-                        {item.alias}
-                      </p>
-                    </div>
-                    {confirmDeleteId === item.id ? (
-                      <div
-                        className="flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() =>
-                            void (isTemplates
-                              ? handleDeleteTemplate(item.id)
-                              : handleDeleteLayout(item.id))
-                          }
-                          className="h-7 rounded-md bg-danger px-2.5 text-[12px] font-medium text-white transition-colors hover:bg-danger-hover"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="h-7 rounded-md bg-bg-muted px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-inset"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className={clsx(
-                          "hidden h-7 items-center rounded-md px-2 text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-danger",
-                          "group-hover:inline-flex",
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteId(item.id);
-                        }}
-                        aria-label={`Delete ${item.name}`}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <DataTable 
+              columns={columns} 
+              data={items} 
+              onRowClick={(item) => 
+                navigate(isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`)
+              }
+              onQuickCreate={() => void (isTemplates ? handleCreateTemplate() : handleCreateLayout())}
+              quickCreateLabel={`New ${isTemplates ? "template" : "layout"}`}
+            />
           )}
         </div>
       </main>

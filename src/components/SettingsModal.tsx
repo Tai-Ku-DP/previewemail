@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { toast } from "sonner";
+import { X, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { clsx } from "clsx";
 import type { SESSettings } from "@/types";
 
@@ -119,19 +121,7 @@ export const SettingsModal = ({
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
             aria-label="Close settings"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -141,19 +131,7 @@ export const SettingsModal = ({
           className="space-y-4 px-6 py-5"
         >
           <div className="flex items-start gap-2.5 rounded-lg border border-accent/20 bg-accent-subtle px-3 py-2.5">
-            <svg
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
-              />
-            </svg>
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
             <p className="text-[12px] leading-relaxed text-fg-secondary">
               Credentials are stored locally in IndexedDB. They never leave your
               device.
@@ -254,7 +232,7 @@ function Field({
       <label className="mb-1.5 block text-[13px] font-medium text-fg">
         {label}
       </label>
-      <input
+      <Input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
