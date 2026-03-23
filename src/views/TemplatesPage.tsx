@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
@@ -6,7 +6,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
+import { Search, Download, Upload } from "lucide-react";
+import { exportData, importData } from "@/lib/exportImport";
+import { useTemplateStore } from "@/stores/templateStore";
+import { useLayoutStore } from "@/stores/layoutStore";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -25,6 +28,41 @@ export default function TemplatesPage() {
     deleteLayout,
     isLoading: layoutsLoading,
   } = useLayouts();
+
+  const loadTemplates = useTemplateStore((s) => s.loadTemplates);
+  const loadLayouts = useLayoutStore((s) => s.loadLayouts);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      await exportData();
+      toast.success("Data exported successfully");
+    } catch {
+      toast.error("Failed to export data");
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      await importData(file);
+      await loadTemplates();
+      await loadLayouts();
+      toast.success("Data imported successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to import data");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const filteredTemplates = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -197,6 +235,37 @@ export default function TemplatesPage() {
           <div className="hidden sm:block">
             <StorageIndicator />
           </div>
+          <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+          <button
+            onClick={handleExport}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-bg px-3 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+            title="Export data"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className={clsx(
+              "inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-bg px-3 text-[13px] font-medium transition-colors",
+              isImporting
+                ? "cursor-wait text-fg-muted opacity-60"
+                : "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
+            )}
+            title="Import data"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={(e) => void handleImport(e)} 
+            accept=".json" 
+            className="hidden" 
+          />
           <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
           <button
             onClick={() =>
