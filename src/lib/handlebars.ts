@@ -8,7 +8,13 @@ export function compileTemplate(
 ): CompileResult {
   try {
     const template = Handlebars.compile(html, { strict: false });
-    return { result: template(data), error: null };
+    return {
+      result: template(data, {
+        allowProtoPropertiesByDefault: true,
+        allowProtoMethodsByDefault: true,
+      }),
+      error: null,
+    };
   } catch (err: unknown) {
     return {
       result: null,
@@ -29,11 +35,16 @@ export function compileWithLayout(
 ): CompileResult {
   try {
     const bodyTemplate = Handlebars.compile(templateHtml, { strict: false });
-    const compiledBody = bodyTemplate(data);
+    const compiledBody = bodyTemplate(data, {
+      allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
+    });
 
     const layoutTemplate = Handlebars.compile(layoutHtml, { strict: false });
     const result = layoutTemplate(data, {
       data: { content: compiledBody },
+      allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
     });
 
     return { result, error: null };
@@ -50,7 +61,10 @@ export function compileSubject(
   data: Record<string, unknown>,
 ): string {
   try {
-    return Handlebars.compile(subject)(data);
+    return Handlebars.compile(subject)(data, {
+      allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
+    });
   } catch {
     return subject;
   }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
-import { Settings } from "lucide-react";
+import { Settings, Paintbrush, Maximize, Minimize } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -17,6 +17,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useEditorStore } from "@/stores/editorStore";
 import { formatHtml, formatJson } from "@/lib/formatter";
 import { buildMockDataSkeleton } from "@/lib/handlebars";
+import { StorageIndicator } from "@/components/StorageIndicator";
 import type { Layout } from "@/types";
 
 export default function TemplateEditorPage() {
@@ -93,9 +94,9 @@ export default function TemplateEditorPage() {
   const activeLayout: Layout | undefined = useMemo(() => {
     if (templateLayoutId) return getLayoutById(templateLayoutId);
     return undefined;
-  }, [templateLayoutId, getLayoutById]);
+  }, [templateLayoutId, getLayoutById, layouts]);
 
-  const { renderedHtml, compileError, compiledSubject } = usePreview(
+  const { renderedHtml, compiledSubject } = usePreview(
     htmlBody,
     subject,
     mockData,
@@ -349,7 +350,7 @@ export default function TemplateEditorPage() {
   const isEditingTemplate = Boolean(selectedTemplate);
 
   return (
-    <div className="flex h-screen flex-col bg-bg overflow-auto">
+    <div className="flex h-screen flex-col bg-bg overflow-hidden">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -383,7 +384,8 @@ export default function TemplateEditorPage() {
         />
       )}
 
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+      {!editorMaximized && (
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={() => navigate("/templates")}
@@ -481,6 +483,12 @@ export default function TemplateEditorPage() {
           )}
 
           <div className="ml-1 flex items-center gap-0.5">
+            <div className="hidden sm:block mr-1">
+              <StorageIndicator />
+            </div>
+
+            <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+
             <button
               onClick={() => setSettingsOpen(true)}
               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
@@ -492,6 +500,7 @@ export default function TemplateEditorPage() {
           </div>
         </div>
       </header>
+      )}
 
       <div className="flex min-h-0 flex-1">
         {isEditingTemplate ? (
@@ -524,15 +533,71 @@ export default function TemplateEditorPage() {
                 </button>
               </div>
 
-              <div className="mb-1.5 mr-1 text-[11px] text-fg-muted">
-                <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
-                  ⌘/
-                </kbd>{" "}
-                switch tab
+              <div className="flex items-center gap-4 items-center mb-1">
+                <div className="text-[11px] text-fg-muted">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
+                    ⌘/
+                  </kbd>{" "}
+                  switch tab
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {templateEditorMainTab === "preview" && (
+                    <button
+                      onClick={togglePreviewMockData}
+                      className="inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+                      aria-label={
+                        previewMockDataOpen ? "Hide mock data" : "Show mock data"
+                      }
+                    >
+                      {previewMockDataOpen ? "Hide mock data" : "Show mock data"}
+                    </button>
+                  )}
+                  {templateEditorMainTab === "edit" && (
+                    <button
+                      onClick={() => {
+                        if (formatInProgress.current) return;
+                        formatInProgress.current = true;
+                        void formatHtml(htmlBody)
+                          .then((formatted) => {
+                            setHtmlBody(formatted);
+                            setIsTemplateDirty(true);
+                            setIsMockDataDirty(false);
+                            setDirty(true);
+                            toast.success("HTML formatted");
+                          })
+                          .catch(() => toast.error("Format failed — check Handlebars syntax"))
+                          .finally(() => {
+                            formatInProgress.current = false;
+                          });
+                      }}
+                      disabled={!htmlBody.trim()}
+                      className={clsx(
+                        'inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium transition-colors',
+                        (!htmlBody.trim())
+                          ? 'opacity-50 cursor-not-allowed text-fg-muted bg-bg-subtle'
+                          : 'bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg',
+                      )}
+                      aria-label="Format code"
+                      title="Format HTML (Shift+Alt+F)"
+                    >
+                      <Paintbrush className="h-3.5 w-3.5" />
+                      Format
+                    </button>
+                  )}
+                  <button
+                    onClick={() => useEditorStore.getState().toggleEditorMaximized()}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-bg text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg"
+                    aria-label={editorMaximized ? 'Exit fullscreen' : 'Fullscreen editor'}
+                    title={editorMaximized ? 'Exit fullscreen (Esc)' : 'Fullscreen editor'}
+                  >
+                    {editorMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 flex flex-col">
               {templateEditorMainTab === "edit" ? (
                 <EditorPanel
                   htmlBody={htmlBody}
@@ -545,10 +610,7 @@ export default function TemplateEditorPage() {
                 />
               ) : (
                 <div
-                  className={clsx(
-                    "flex min-h-0 flex-1 min-w-0 bg-bg-subtle",
-                    editorMaximized && "pointer-events-none",
-                  )}
+                  className="flex min-h-0 flex-1 min-w-0 bg-bg-subtle"
                   ref={previewSplitRef}
                 >
                   <div
@@ -559,37 +621,18 @@ export default function TemplateEditorPage() {
                         : "100%",
                     }}
                   >
-                    <div className="flex h-10 items-end justify-between border-b border-border bg-bg px-2">
-                      <div className="px-3 text-[12px] text-fg-muted">
-                        Email Preview
-                      </div>
-                      <button
-                        onClick={togglePreviewMockData}
-                        className="mb-1.5 mr-1 inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-                        aria-label={
-                          previewMockDataOpen
-                            ? "Hide mock data"
-                            : "Show mock data"
-                        }
-                      >
-                        {previewMockDataOpen
-                          ? "Hide mock data"
-                          : "Show mock data"}
-                      </button>
-                    </div>
-
                     <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
                       {compiledSubject && (
                         <div className="shrink-0 border-b border-border sbg-bg px-3 py-2">
-                          <span className="text-[11px] font-medium text-fg-muted">
-                            Subject
+                          <span className="text-[13px] font-medium text-fg-muted">
+                            Subject:
+                            <span className="mt-0.5 text-[13px] text-fg ml-2">
+                              {compiledSubject}
+                            </span>
                           </span>
-                          <p className="mt-0.5 text-[13px] text-fg">
-                            {compiledSubject}
-                          </p>
                         </div>
                       )}
-                      
+
                       <iframe
                         srcDoc={previewSrcDoc}
                         sandbox="allow-same-origin"
@@ -640,7 +683,7 @@ export default function TemplateEditorPage() {
                       </div>
 
                       <div
-                        className="min-w-0 flex flex-col border-l border-border bg-bg"
+                        className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
                         style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
                       >
                         <MockDataEditor

@@ -10,6 +10,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
+import { StorageIndicator } from "@/components/StorageIndicator";
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
@@ -162,10 +163,7 @@ export default function TemplatesPage() {
         },
       },
     ],
-    [
-      confirmDeleteId,
-      isTemplates,
-    ]
+    [confirmDeleteId, isTemplates],
   );
 
   return (
@@ -196,6 +194,10 @@ export default function TemplatesPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <div className="hidden sm:block">
+            <StorageIndicator />
+          </div>
+          <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
           <button
             onClick={() =>
               void (isTemplates ? handleCreateTemplate() : handleCreateLayout())
@@ -208,10 +210,7 @@ export default function TemplatesPage() {
         </div>
       </header>
 
-
-
       <main className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-4 py-5">
-
         <div className="flex items-center gap-2 justify-between">
           <Tabs
             value={tab}
@@ -231,7 +230,7 @@ export default function TemplatesPage() {
             </TabsList>
           </Tabs>
 
-           <div className="w-[320px] max-w-full">
+          <div className="w-[320px] max-w-full">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-muted" />
               <Input
@@ -270,13 +269,19 @@ export default function TemplatesPage() {
               </button>
             </div>
           ) : (
-            <DataTable 
-              columns={columns} 
-              data={items} 
-              onRowClick={(item) => 
-                navigate(isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`)
+            <DataTable
+              columns={columns}
+              data={items}
+              onRowClick={(item) =>
+                navigate(
+                  isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`,
+                )
               }
-              onQuickCreate={() => void (isTemplates ? handleCreateTemplate() : handleCreateLayout())}
+              onQuickCreate={() =>
+                void (isTemplates
+                  ? handleCreateTemplate()
+                  : handleCreateLayout())
+              }
               quickCreateLabel={`New ${isTemplates ? "template" : "layout"}`}
             />
           )}

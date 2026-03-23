@@ -9,6 +9,8 @@ import { useLayouts } from "@/hooks/useLayouts";
 import { useMockData } from "@/hooks/useMockData";
 import { useEditorStore } from "@/stores/editorStore";
 import { buildMockDataSkeleton, compileTemplate } from "@/lib/handlebars";
+import { formatHtml } from "@/lib/formatter";
+import { Paintbrush, Maximize, Minimize } from "lucide-react";
 
 export default function LayoutEditorPage() {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export default function LayoutEditorPage() {
   const togglePreviewMockData = useEditorStore((s) => s.togglePreviewMockData);
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
+  const editorMaximized = useEditorStore((s) => s.editorMaximized);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [layoutName, setLayoutName] = useState("");
@@ -205,7 +208,7 @@ export default function LayoutEditorPage() {
   const isEditingLayout = Boolean(selectedLayout);
 
   return (
-    <div className="flex h-screen flex-col bg-bg overflow-auto">
+    <div className="flex h-screen flex-col bg-bg overflow-hidden">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -220,7 +223,8 @@ export default function LayoutEditorPage() {
         }}
       />
 
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+      {!editorMaximized && (
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={() => navigate("/templates")}
@@ -266,6 +270,7 @@ export default function LayoutEditorPage() {
           <ThemeToggle />
         </div>
       </header>
+      )}
 
       <div className="min-h-0 flex-1">
         {isEditingLayout ? (
@@ -298,11 +303,49 @@ export default function LayoutEditorPage() {
                 </button>
               </div>
 
-              <div className="mb-1.5 mr-1 text-[11px] text-fg-muted">
-                <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
-                  ⌘/
-                </kbd>{" "}
-                switch tab
+              <div className="mb-1.5 mr-1 flex items-center gap-4">
+                <div className="text-[11px] text-fg-muted">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
+                    ⌘/
+                  </kbd>{" "}
+                  switch tab
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {mainTab === "edit" && (
+                    <button
+                      onClick={() => {
+                        if (!htmlBody.trim()) return;
+                        void formatHtml(htmlBody)
+                          .then((formatted) => {
+                            setHtmlBody(formatted);
+                            setDirty(true);
+                            toast.success("HTML formatted");
+                          })
+                          .catch(() => toast.error("Format failed — check Handlebars syntax"));
+                      }}
+                      disabled={!htmlBody.trim()}
+                      className={clsx(
+                        'inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium transition-colors',
+                        (!htmlBody.trim())
+                          ? 'opacity-50 cursor-not-allowed text-fg-muted bg-bg-subtle'
+                          : 'bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg',
+                      )}
+                      aria-label="Format code"
+                      title="Format HTML (Shift+Alt+F)"
+                    >
+                      <Paintbrush className="h-3.5 w-3.5" />
+                      Format
+                    </button>
+                  )}
+                  <button
+                    onClick={() => useEditorStore.getState().toggleEditorMaximized()}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-bg text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg"
+                    aria-label={editorMaximized ? 'Exit fullscreen' : 'Fullscreen editor'}
+                    title={editorMaximized ? 'Exit fullscreen (Esc)' : 'Fullscreen editor'}
+                  >
+                    {editorMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -403,7 +446,7 @@ export default function LayoutEditorPage() {
                       </div>
 
                       <div
-                        className="min-w-0 flex flex-col border-l border-border bg-bg"
+                        className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
                         style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
                       >
                         <MockDataEditor

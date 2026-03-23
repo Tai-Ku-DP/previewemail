@@ -22,7 +22,7 @@ export const MockDataEditor = ({
 }: MockDataEditorProps) => {
   void htmlBody;
   return (
-    <div className="flex h-screen flex-col bg-bg">
+    <div className="flex h-full flex-col bg-bg">
       <div
         className={clsx(
           "min-h-0 flex-1 overflow-hidden transition-shadow",

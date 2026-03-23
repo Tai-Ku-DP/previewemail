@@ -106,7 +106,7 @@ export const PreviewPanel = ({
               srcDoc={compiledHtml ?? ""}
               sandbox="allow-same-origin"
               title="Email Preview"
-              // className="h-[600px] w-full border-0"
+              className="h-full w-full border-0"
               style={{ width: previewWidth }}
             />
           </div>
