@@ -81,7 +81,6 @@ export function AppTour() {
       runTour();
       localStorage.setItem("previewemail_tour_seen", "true");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady]);
 
   return (

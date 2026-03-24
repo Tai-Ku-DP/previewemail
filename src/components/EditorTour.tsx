@@ -41,7 +41,7 @@ export function EditorTour() {
           element: "#tour-editor-save",
           popover: {
             title: "Don't forget to Save!",
-            description: "Click here to Save your progress (or press Cmd/Ctrl + S). The app also auto-saves in the background, but it's always good practice to explicitly save.",
+            description: "Click here to Save your progress (or press Cmd/Ctrl + S). Be sure to save frequently so you don't lose your work!",
             side: "bottom",
             align: "end"
           },
@@ -58,7 +58,6 @@ export function EditorTour() {
       runTour();
       localStorage.setItem("previewemail_editor_tour_seen", "true");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady]);
 
   return (

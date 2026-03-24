@@ -27,7 +27,7 @@ export default function LayoutEditorPage() {
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
   const editorMaximized = useEditorStore((s) => s.editorMaximized);
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const [layoutName, setLayoutName] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -96,23 +96,30 @@ export default function LayoutEditorPage() {
     };
 
     let current: Record<string, unknown> = {};
+    let isParsable = true;
     try {
       current = JSON.parse(mockDataJson) as Record<string, unknown>;
     } catch {
-      current = {};
+      isParsable = false;
     }
+
+    if (!isParsable) return;
 
     const filled: Record<string, unknown> = { ...current };
     const skeleton = buildMockDataSkeleton(htmlBody);
     mergeDeep(filled, skeleton);
-    const nextJson = JSON.stringify(filled, null, 2);
-    if (nextJson !== mockDataJson) {
-      queueMicrotask(() => {
-        setMockDataJson(nextJson);
-        updateFromJson(nextJson);
-      });
+    
+    if (JSON.stringify(filled) !== JSON.stringify(current)) {
+      const nextJson = JSON.stringify(filled, null, 2);
+      if (nextJson !== mockDataJson) {
+        queueMicrotask(() => {
+          setMockDataJson(nextJson);
+          updateFromJson(nextJson);
+        });
+      }
     }
-  }, [mainTab, htmlBody, mockDataJson, updateFromJson]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab, htmlBody]);
 
   const { renderedHtml, compileError } = useMemo(() => {
     const placeholder = `
@@ -181,26 +188,16 @@ export default function LayoutEditorPage() {
   }, [handleSaveLayout, htmlBody]);
 
   useEffect(() => {
-    if (!isDirty) {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-      return;
-    }
+    if (!isDirty) return;
 
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(() => {
-      if (saveInProgress.current) return;
-      saveInProgress.current = true;
-      void handleSaveLayout().finally(() => {
-        saveInProgress.current = false;
-      });
-    }, 4000);
-
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Changes you made may not be saved.";
     };
-  }, [isDirty, handleSaveLayout, layoutName, htmlBody, textBody]);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   if (!layoutId) return <Navigate to="/templates" replace />;
   const layoutExists = layouts.some((l) => l.id === layoutId);
@@ -230,7 +227,14 @@ export default function LayoutEditorPage() {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Logo className="h-7 w-7" />
             <button
-              onClick={() => navigate("/templates")}
+              onClick={() => {
+                if (isDirty) {
+                  if (!window.confirm("Changes you made may not be saved. Are you sure you want to leave?")) {
+                    return;
+                  }
+                }
+                navigate("/templates");
+              }}
               className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
               aria-label="Back to templates"
             >

@@ -9,7 +9,7 @@ import { AppTour } from "@/components/AppTour";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Download, Upload } from "lucide-react";
+import { Search, Download, Upload, MoreHorizontal } from "lucide-react";
 import { exportData, importData } from "@/lib/exportImport";
 import { useTemplateStore } from "@/stores/templateStore";
 import { useLayoutStore } from "@/stores/layoutStore";
@@ -17,10 +17,52 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { StorageIndicator } from "@/components/StorageIndicator";
+import { compileTemplate, compileWithLayout } from "@/lib/handlebars";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+function wrapIframeSrcDoc(html: string): string {
+  const safe = html ?? "";
+  const style = `<style>html,body{margin:0 !important;padding:0 !important;}</style>`;
+  if (!safe.trim()) return safe;
+  if (/<html[\s>]/i.test(safe)) {
+    if (/<head[\s>]/i.test(safe)) {
+      return safe.replace(/<head([^>]*)>/i, `<head$1>${style}`);
+    }
+    return safe.replace(/<html([^>]*)>/i, `<html$1><head>${style}</head>`);
+  }
+  if (/<body[\s>]/i.test(safe)) {
+    return safe.replace(/<body([^>]*)>/i, `<body$1>${style}`);
+  }
+  return `<!doctype html><html><head>${style}</head><body>${safe}</body></html>`;
+}
+
+function TablePreviewThumb({ item, isTemplate, layouts }: { item: any, isTemplate: boolean, layouts: any[] }) {
+  const html = useMemo(() => {
+    if (!isTemplate) return item.htmlBody;
+    const layout = item.layoutId ? layouts.find((l) => l.id === item.layoutId) : null;
+    if (layout) {
+      return compileWithLayout(item.htmlBody, layout.htmlBody, item.mockData || {}).result ?? "";
+    }
+    return compileTemplate(item.htmlBody, item.mockData || {}).result ?? "";
+  }, [item, isTemplate, layouts]);
+  
+  return (
+    <div className="h-14 w-24 overflow-hidden rounded-md border border-border bg-white relative shrink-0 shadow-sm">
+       <div style={{ width: "480px", height: "280px", transform: "scale(0.2)", transformOrigin: "top left" }} className="absolute">
+         <iframe srcDoc={wrapIframeSrcDoc(html)} className="w-full h-full border-0 pointer-events-none" tabIndex={-1} scrolling="no" sandbox="allow-same-origin" />
+       </div>
+    </div>
+  );
+}
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const { templates, createTemplate, deleteTemplate, isLoading } =
+  const { templates, createTemplate, updateTemplate, deleteTemplate, isLoading } =
     useTemplates();
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -30,6 +72,7 @@ export default function TemplatesPage() {
   const {
     layouts,
     createLayout,
+    updateLayout,
     deleteLayout,
     isLoading: layoutsLoading,
   } = useLayouts();
@@ -74,7 +117,7 @@ export default function TemplatesPage() {
     if (!q) return templates;
     return templates.filter(
       (t) =>
-        t.name.toLowerCase().includes(q) || t.alias.toLowerCase().includes(q),
+        t.name.toLowerCase().includes(q) || (t.alias || "").toLowerCase().includes(q),
     );
   }, [templates, search]);
 
@@ -83,7 +126,7 @@ export default function TemplatesPage() {
     if (!q) return layouts;
     return layouts.filter(
       (l) =>
-        l.name.toLowerCase().includes(q) || l.alias.toLowerCase().includes(q),
+        l.name.toLowerCase().includes(q) || (l.alias || "").toLowerCase().includes(q),
     );
   }, [layouts, search]);
 
@@ -113,7 +156,7 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = useCallback(async (id: string) => {
     try {
       await deleteTemplate(id);
       toast.success("Template deleted");
@@ -122,9 +165,9 @@ export default function TemplatesPage() {
     } finally {
       setConfirmDeleteId(null);
     }
-  };
+  }, [deleteTemplate]);
 
-  const handleDeleteLayout = async (id: string) => {
+  const handleDeleteLayout = useCallback(async (id: string) => {
     try {
       await deleteLayout(id);
       toast.success("Layout deleted");
@@ -133,7 +176,42 @@ export default function TemplatesPage() {
     } finally {
       setConfirmDeleteId(null);
     }
-  };
+  }, [deleteLayout]);
+
+  const handleDuplicateTemplate = useCallback(async (template: any) => {
+    try {
+      const newTemplate = await createTemplate(
+        `${template.name} (Copy)`,
+        `${template.alias}-copy-${Date.now()}`
+      );
+      await updateTemplate(newTemplate.id, {
+        htmlBody: template.htmlBody,
+        textBody: template.textBody,
+        subject: template.subject,
+        layoutId: template.layoutId,
+        mockData: template.mockData,
+      });
+      toast.success("Template duplicated");
+    } catch {
+      toast.error("Failed to duplicate template");
+    }
+  }, [createTemplate, updateTemplate]);
+
+  const handleDuplicateLayout = useCallback(async (layout: any) => {
+    try {
+      const newLayout = await createLayout(
+        `${layout.name} (Copy)`,
+        `${layout.alias}-copy-${Date.now()}`
+      );
+      await updateLayout(newLayout.id, {
+        htmlBody: layout.htmlBody,
+        textBody: layout.textBody,
+      });
+      toast.success("Layout duplicated");
+    } catch {
+      toast.error("Failed to duplicate layout");
+    }
+  }, [createLayout, updateLayout]);
 
   const handleTabChange = useCallback((val: string) => {
     setActiveTab(val as "templates" | "layouts");
@@ -150,16 +228,32 @@ export default function TemplatesPage() {
       {
         accessorKey: "name",
         header: "Name",
-        cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-fg">
-              {row.original.name}
-            </p>
-            <p className="mt-0.5 truncate text-[11px] text-fg-muted">
-              {row.original.alias}
-            </p>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          const layout = isTemplates && item.layoutId 
+            ? layouts.find(l => l.id === item.layoutId) 
+            : null;
+
+          return (
+            <div className="flex items-center gap-4 min-w-0 py-1">
+              <TablePreviewThumb item={item} isTemplate={isTemplates} layouts={layouts} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14.5px] font-medium text-fg">
+                  {item.name}
+                </p>
+                <div className="mt-1 flex items-center gap-2 truncate text-[12px] text-fg-muted">
+                  <span className="truncate">{item.alias}</span>
+                  {layout && (
+                    <>
+                      <span className="text-border">&bull;</span>
+                      <span className="truncate text-fg-secondary">Layout: {layout.name}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -193,30 +287,48 @@ export default function TemplatesPage() {
           }
 
           return (
-            <div className="flex justify-end">
-              <button
-                className={clsx(
-                  "invisible h-7 items-center rounded-md px-2 text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-danger",
-                  "group-hover:visible inline-flex",
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmDeleteId(item.id);
-                }}
-                aria-label={`Delete ${item.name}`}
-              >
-                Delete
-              </button>
+            <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg">
+                  <MoreHorizontal className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem onClick={() => navigate(isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`)}>
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    if (isTemplates) {
+                      void handleDuplicateTemplate(item);
+                    } else {
+                      void handleDuplicateLayout(item);
+                    }
+                  }}>
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-danger focus:text-danger focus:bg-danger/10" onClick={() => setConfirmDeleteId(item.id)}>
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           );
         },
       },
     ],
-    [confirmDeleteId, isTemplates],
+    [
+      confirmDeleteId,
+      isTemplates,
+      handleDuplicateTemplate,
+      handleDuplicateLayout,
+      handleDeleteTemplate,
+      handleDeleteLayout,
+      navigate,
+      layouts
+    ],
   );
 
   return (
-    <div className="flex h-screen flex-col bg-bg">
+    <div className="flex min-h-screen flex-col bg-bg">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -300,7 +412,7 @@ export default function TemplatesPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-4 py-5">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-5 pb-20">
         <div className="flex items-center gap-2 justify-between">
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-9">
@@ -336,7 +448,7 @@ export default function TemplatesPage() {
           </div>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-auto">
+        <div className="mt-4 w-full">
           {loading ? (
             <div className="p-4 text-xs text-fg-muted">Loading…</div>
           ) : items.length === 0 ? (

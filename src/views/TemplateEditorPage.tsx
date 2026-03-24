@@ -56,7 +56,7 @@ export default function TemplateEditorPage() {
   const [sendTestOpen, setSendTestOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   // Template editing state
   const [htmlBody, setHtmlBody] = useState("");
@@ -65,8 +65,6 @@ export default function TemplateEditorPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
-  const [isTemplateDirty, setIsTemplateDirty] = useState(false);
-  const [isMockDataDirty, setIsMockDataDirty] = useState(false);
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -88,8 +86,6 @@ export default function TemplateEditorPage() {
       setMockDataJson(json);
       reset(selectedTemplate.mockData);
       setDirty(false);
-      setIsTemplateDirty(false);
-      setIsMockDataDirty(false);
     });
   }, [selectedTemplate, reset, setDirty]);
 
@@ -115,7 +111,6 @@ export default function TemplateEditorPage() {
       setMockDataJson(value);
       updateFromJson(value);
       setDirty(true);
-      setIsMockDataDirty(true);
     },
     [updateFromJson, setDirty],
   );
@@ -151,11 +146,15 @@ export default function TemplateEditorPage() {
     };
 
     let current: Record<string, unknown> = {};
+    let isParsable = true;
     try {
       current = JSON.parse(mockDataJson) as Record<string, unknown>;
     } catch {
-      current = {};
+      isParsable = false;
     }
+
+    // Do not format or touch user's JSON if they are in the middle of typing an invalid structure
+    if (!isParsable) return;
 
     const filled: Record<string, unknown> = { ...current };
 
@@ -165,23 +164,20 @@ export default function TemplateEditorPage() {
     if (activeLayout?.htmlBody) {
       mergeDeep(filled, buildMockDataSkeleton(activeLayout.htmlBody));
     }
-    const nextJson = JSON.stringify(filled, null, 2);
-    if (nextJson !== mockDataJson) {
-      queueMicrotask(() => {
-        setMockDataJson(nextJson);
-        updateFromJson(nextJson);
-        setDirty(true);
-        setIsMockDataDirty(true);
-      });
+    
+    // Only auto-format and update if new skeleton keys were actually recursively added
+    if (JSON.stringify(filled) !== JSON.stringify(current)) {
+      const nextJson = JSON.stringify(filled, null, 2);
+      if (nextJson !== mockDataJson) {
+        queueMicrotask(() => {
+          setMockDataJson(nextJson);
+          updateFromJson(nextJson);
+          setDirty(true);
+        });
+      }
     }
-  }, [
-    templateEditorMainTab,
-    htmlBody,
-    activeLayout?.htmlBody,
-    mockDataJson,
-    updateFromJson,
-    setDirty,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateEditorMainTab, htmlBody, activeLayout?.htmlBody]); // INTENTIONALLY EXCLUDING mockDataJson!
 
   const handleSaveTemplate = useCallback(
     async (overrides?: {
@@ -213,8 +209,6 @@ export default function TemplateEditorPage() {
         }
         toast.success("Template saved");
         setDirty(false);
-        setIsTemplateDirty(false);
-        setIsMockDataDirty(false);
         setJustSaved(true);
         window.setTimeout(() => setJustSaved(false), 2000);
       } catch {
@@ -237,35 +231,16 @@ export default function TemplateEditorPage() {
   );
 
   useEffect(() => {
-    const mockDataOnlyDirty = isMockDataDirty && !isTemplateDirty;
-    if (!isDirty || templateEditorMainTab !== "preview" || mockDataOnlyDirty) {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-      return;
-    }
+    if (!isDirty) return;
 
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(() => {
-      void handleSaveTemplate();
-    }, 4000);
-
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Changes you made may not be saved.";
     };
-  }, [
-    isDirty,
-    templateEditorMainTab,
-    isTemplateDirty,
-    isMockDataDirty,
-    handleSaveTemplate,
-    htmlBody,
-    textBody,
-    subject,
-    templateName,
-    templateLayoutId,
-    mockDataJson,
-  ]);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const handleSendTest = useCallback(() => {
     if (!isConfigured) return;
@@ -317,8 +292,6 @@ export default function TemplateEditorPage() {
           void formatHtml(htmlBody)
             .then((formatted) => {
               setHtmlBody(formatted);
-              setIsTemplateDirty(true);
-              setIsMockDataDirty(false);
               setDirty(true);
               toast.success("HTML formatted");
             })
@@ -391,7 +364,14 @@ export default function TemplateEditorPage() {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Logo className="h-7 w-7" />
           <button
-            onClick={() => navigate("/templates")}
+            onClick={() => {
+              if (isDirty) {
+                if (!window.confirm("Changes you made may not be saved. Are you sure you want to leave?")) {
+                  return;
+                }
+              }
+              navigate("/templates");
+            }}
             className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
             aria-label="Back to templates"
           >
@@ -406,8 +386,6 @@ export default function TemplateEditorPage() {
                 value={templateName}
                 onChange={(e) => {
                   setTemplateName(e.target.value);
-                  setIsTemplateDirty(true);
-                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
                 className="h-7 w-48 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -419,8 +397,6 @@ export default function TemplateEditorPage() {
                 value={subject}
                 onChange={(e) => {
                   setSubject(e.target.value);
-                  setIsTemplateDirty(true);
-                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
                 placeholder="Subject line {{variables}}"
@@ -437,8 +413,6 @@ export default function TemplateEditorPage() {
               value={templateLayoutId ?? ""}
               onChange={(e) => {
                 setTemplateLayoutId(e.target.value || null);
-                setIsTemplateDirty(true);
-                setIsMockDataDirty(false);
                 setDirty(true);
               }}
               className="h-8 rounded-md border border-border bg-bg px-2 pr-7 text-[12px] text-fg-secondary transition-colors hover:bg-bg-subtle"
@@ -567,8 +541,6 @@ export default function TemplateEditorPage() {
                         void formatHtml(htmlBody)
                           .then((formatted) => {
                             setHtmlBody(formatted);
-                            setIsTemplateDirty(true);
-                            setIsMockDataDirty(false);
                             setDirty(true);
                             toast.success("HTML formatted");
                           })
@@ -609,8 +581,6 @@ export default function TemplateEditorPage() {
                   htmlBody={htmlBody}
                   onHtmlChange={(v: string) => {
                     setHtmlBody(v);
-                    setIsTemplateDirty(true);
-                    setIsMockDataDirty(false);
                     setDirty(true);
                   }}
                 />
