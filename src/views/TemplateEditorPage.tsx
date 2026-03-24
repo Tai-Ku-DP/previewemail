@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
 import { SettingsModal } from "@/components/SettingsModal";
-import { SendTestModal } from "@/components/SendTestModal";
 import { EditorPanel } from "@/editor/EditorPanel";
 import { EditorTour } from "@/components/EditorTour";
 import { MockDataEditor } from "@/mockdata/MockDataEditor";
@@ -47,13 +46,11 @@ export default function TemplateEditorPage() {
   const setDirty = useEditorStore((s) => s.setDirty);
   const {
     settings,
-    isConfigured,
     save: saveSettings,
     clear: clearSettings,
   } = useSettings();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sendTestOpen, setSendTestOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
 
@@ -242,15 +239,6 @@ export default function TemplateEditorPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  const handleSendTest = useCallback(() => {
-    if (!isConfigured) return;
-    if (!renderedHtml) {
-      toast.error("Template body is empty");
-      return;
-    }
-    setSendTestOpen(true);
-  }, [isConfigured, renderedHtml]);
-
   const formatInProgress = useRef(false);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -348,17 +336,6 @@ export default function TemplateEditorPage() {
         onClear={clearSettings}
       />
 
-      {settings && (
-        <SendTestModal
-          open={sendTestOpen}
-          onClose={() => setSendTestOpen(false)}
-          settings={settings}
-          compiledHtml={renderedHtml}
-          compiledSubject={compiledSubject}
-          textBody={textBody}
-        />
-      )}
-
       {!editorMaximized && (
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -425,27 +402,6 @@ export default function TemplateEditorPage() {
                 </option>
               ))}
             </select>
-          )}
-
-          {isEditingTemplate && (
-            <button
-              onClick={handleSendTest}
-              disabled={!isConfigured}
-              className={clsx(
-                "inline-flex h-8 items-center rounded-md border border-border px-3 text-[13px] font-medium transition-colors",
-                isConfigured
-                  ? "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
-                  : "cursor-not-allowed text-fg-muted opacity-60",
-              )}
-              aria-label="Send test email"
-              title={
-                isConfigured
-                  ? "Send test email"
-                  : "Configure AWS SES in Settings to enable sending tests"
-              }
-            >
-              Send Test
-            </button>
           )}
 
           {isEditingTemplate && (

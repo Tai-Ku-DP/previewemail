@@ -58,7 +58,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
 <p>Click the button below to complete your profile and get started.</p>
 <div class="button-container">
   <a href="{{actionUrl}}" class="button">Get Started Now</a>
-</div>`
+</div>`,
   },
   {
     id: "password-reset-v1",
@@ -105,12 +105,13 @@ export const predefinedTemplates: PredefinedTemplate[] = [
 <div class="button-container">
   <a href="{{resetUrl}}" class="button">Reset Password</a>
 </div>
-<p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>`
+<p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>`,
   },
   {
     id: "newsletter-v1",
     name: "Monthly Newsletter",
-    description: "A feature-rich newsletter template to share updates and news.",
+    description:
+      "A feature-rich newsletter template to share updates and news.",
     subject: "Your Monthly Update - {{month}}",
     mockData: {
       month: "October 2025",
@@ -119,7 +120,8 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       articles: [
         {
           title: "New Dashboard Design",
-          summary: "We've completely redesigned our dashboard for better analytics.",
+          summary:
+            "We've completely redesigned our dashboard for better analytics.",
         },
         {
           title: "Faster Exports",
@@ -171,6 +173,6 @@ export const predefinedTemplates: PredefinedTemplate[] = [
   <p>{{this.summary}}</p>
   <a href="{{../readMoreUrl}}" class="read-more">Read Full Story &rarr;</a>
 </div>
-{{/each}}`
+{{/each}}`,
   },
 ];

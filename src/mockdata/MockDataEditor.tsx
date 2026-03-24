@@ -14,6 +14,16 @@ interface MockDataEditorProps {
 
 const extensions = [json(), EditorView.lineWrapping, lintGutter(), jsonLinter];
 
+const BASIC_SETUP = {
+  lineNumbers: true,
+  foldGutter: true,
+  highlightActiveLine: false,
+  highlightActiveLineGutter: false,
+  autocompletion: true,
+  closeBrackets: true,
+  tabSize: 2,
+};
+
 export const MockDataEditor = ({
   value,
   htmlBody,
@@ -25,7 +35,7 @@ export const MockDataEditor = ({
     <div className="flex h-full flex-col bg-bg">
       <div
         className={clsx(
-          "min-h-0 flex-1 overflow-hidden transition-shadow",
+          "min-h-0 flex-1 overflow-auto transition-shadow bg-black",
           error ? "ring-1 ring-danger/40 ring-inset" : "",
         )}
       >
@@ -34,16 +44,9 @@ export const MockDataEditor = ({
           extensions={extensions}
           onChange={onChange}
           theme="dark"
-          className="h-full bg-black"
-          basicSetup={{
-            lineNumbers: true,
-            foldGutter: true,
-            highlightActiveLine: false,
-            highlightActiveLineGutter: false,
-            autocompletion: true,
-            closeBrackets: true,
-            tabSize: 2,
-          }}
+          height="auto"
+          className="min-h-full"
+          basicSetup={BASIC_SETUP}
         />
       </div>
     </div>

@@ -13,8 +13,17 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
 }
 
+const BASIC_SETUP = {
+  lineNumbers: true,
+  foldGutter: true,
+  highlightActiveLine: false,
+  highlightActiveLineGutter: false,
+  autocompletion: true,
+  closeBrackets: true,
+  tabSize: 2,
+};
+
 export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const extensions = useMemo(
@@ -51,15 +60,7 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
         onChange={handleChange}
         theme="dark"
         className="h-full"
-        basicSetup={{
-          lineNumbers: true,
-          foldGutter: true,
-          highlightActiveLine: false,
-          highlightActiveLineGutter: false,
-          autocompletion: true,
-          closeBrackets: true,
-          tabSize: 2,
-        }}
+        basicSetup={BASIC_SETUP}
       />
     </div>
   );
