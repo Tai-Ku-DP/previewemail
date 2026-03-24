@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { predefinedTemplates, type PredefinedTemplate } from "@/lib/predefinedTemplates";
 import { Logo } from "@/components/Logo";
 import { useTemplates } from "@/hooks/useTemplates";
-import { compileTemplate } from "@/lib/handlebars";
+import { useLayouts } from "@/hooks/useLayouts";
+import { compileTemplate, compileWithLayout } from "@/lib/handlebars";
 
 function wrapIframeSrcDoc(html: string): string {
   const safe = html ?? "";
@@ -34,6 +35,7 @@ export default function TemplateLibraryPage() {
   const [search, setSearch] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<PredefinedTemplate | null>(null);
   const { createTemplate, updateTemplate } = useTemplates();
+  const { createLayout, updateLayout } = useLayouts();
 
   const filteredTemplates = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -45,18 +47,26 @@ export default function TemplateLibraryPage() {
 
   const handleUseTemplate = useCallback(async (pt: PredefinedTemplate) => {
     try {
-      const template = await createTemplate(pt.name, `imported-${Date.now()}`);
+      let layoutId = undefined;
+      if (pt.layoutHtmlBody) {
+        const layout = await createLayout(`${pt.name} Layout`, `imported-layout-${Date.now()}`);
+        await updateLayout(layout.id, { htmlBody: pt.layoutHtmlBody, textBody: "" });
+        layoutId = layout.id;
+      }
+      
+      const template = await createTemplate(pt.name, `imported-template-${Date.now()}`);
       await updateTemplate(template.id, {
         htmlBody: pt.htmlBody,
         subject: pt.subject,
         mockData: pt.mockData,
+        layoutId,
       });
       toast.success("Template imported successfully");
       navigate(`/templates/${template.id}`);
     } catch {
       toast.error("Failed to import template");
     }
-  }, [createTemplate, updateTemplate, navigate]);
+  }, [createTemplate, updateTemplate, createLayout, updateLayout, navigate]);
 
   return (
     <div className="flex h-screen flex-col bg-bg">
@@ -122,7 +132,11 @@ export default function TemplateLibraryPage() {
                   style={{ width: "600px", height: "800px", transform: "scale(0.40)" }}
                 >
                   <iframe
-                    srcDoc={wrapIframeSrcDoc(compileTemplate(t.htmlBody, t.mockData).result ?? "")}
+                    srcDoc={wrapIframeSrcDoc(
+                      t.layoutHtmlBody
+                        ? compileWithLayout(t.htmlBody, t.layoutHtmlBody, t.mockData || {}).result ?? ""
+                        : compileTemplate(t.htmlBody, t.mockData || {}).result ?? ""
+                    )}
                     className="w-full h-full border-0 bg-white"
                     scrolling="no"
                     tabIndex={-1}
@@ -196,7 +210,11 @@ export default function TemplateLibraryPage() {
             
             <div className="flex-1 overflow-hidden bg-white">
               <iframe
-                srcDoc={wrapIframeSrcDoc(compileTemplate(previewTemplate.htmlBody, previewTemplate.mockData).result ?? "")}
+                srcDoc={wrapIframeSrcDoc(
+                  previewTemplate.layoutHtmlBody 
+                  ? compileWithLayout(previewTemplate.htmlBody, previewTemplate.layoutHtmlBody, previewTemplate.mockData || {}).result ?? ""
+                  : compileTemplate(previewTemplate.htmlBody, previewTemplate.mockData).result ?? ""
+                )}
                 className="h-full w-full border-0"
                 title={`${previewTemplate.name} Preview`}
                 sandbox="allow-same-origin"

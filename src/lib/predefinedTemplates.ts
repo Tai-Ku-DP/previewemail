@@ -6,6 +6,7 @@ export interface PredefinedTemplate {
   subject: string;
   htmlBody: string;
   mockData: Record<string, any>;
+  layoutHtmlBody?: string;
 }
 
 export const predefinedTemplates: PredefinedTemplate[] = [
@@ -18,12 +19,13 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       companyName: "Acme Corp",
       userName: "Jane Doe",
       actionUrl: "https://example.com/start",
+      currentYear: new Date().getFullYear(),
     },
-    htmlBody: `<!DOCTYPE html>
+    layoutHtmlBody: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Welcome to {{companyName}}</title>
+  <title>PreviewEmail Layout</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -42,20 +44,21 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       <h1>Welcome aboard! 🚀</h1>
     </div>
     <div class="content">
-      <p>Hi {{userName}},</p>
-      <p>We're thrilled to have you here at <strong>{{companyName}}</strong>. We've built our platform to help you achieve your goals faster and easier than ever before.</p>
-      <p>Click the button below to complete your profile and get started.</p>
-      <div class="button-container">
-        <a href="{{actionUrl}}" class="button">Get Started Now</a>
-      </div>
+      {{{@content}}}
     </div>
     <div class="footer">
-      <p>&copy; 2025 {{companyName}}. All rights reserved.</p>
+      <p>&copy; {{currentYear}} {{companyName}}. All rights reserved.</p>
       <p>If you have any questions, reply back to this email.</p>
     </div>
   </div>
 </body>
 </html>`,
+    htmlBody: `<p>Hi {{userName}},</p>
+<p>We're thrilled to have you here at <strong>{{companyName}}</strong>. We've built our platform to help you achieve your goals faster and easier than ever before.</p>
+<p>Click the button below to complete your profile and get started.</p>
+<div class="button-container">
+  <a href="{{actionUrl}}" class="button">Get Started Now</a>
+</div>`
   },
   {
     id: "password-reset-v1",
@@ -67,7 +70,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       userName: "Jane Doe",
       resetUrl: "https://example.com/reset-password",
     },
-    htmlBody: `<!DOCTYPE html>
+    layoutHtmlBody: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -89,12 +92,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       <h1>{{companyName}}</h1>
     </div>
     <div class="content">
-      <p>Hi {{userName}},</p>
-      <p>We received a request to reset your password. You can reset it by clicking the button below:</p>
-      <div class="button-container">
-        <a href="{{resetUrl}}" class="button">Reset Password</a>
-      </div>
-      <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+      {{{@content}}}
     </div>
     <div class="footer">
       <p>This password reset link will expire in 24 hours.</p>
@@ -102,12 +100,17 @@ export const predefinedTemplates: PredefinedTemplate[] = [
   </div>
 </body>
 </html>`,
+    htmlBody: `<p>Hi {{userName}},</p>
+<p>We received a request to reset your password. You can reset it by clicking the button below:</p>
+<div class="button-container">
+  <a href="{{resetUrl}}" class="button">Reset Password</a>
+</div>
+<p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>`
   },
   {
     id: "newsletter-v1",
     name: "Monthly Newsletter",
-    description:
-      "A feature-rich newsletter template to share updates and news.",
+    description: "A feature-rich newsletter template to share updates and news.",
     subject: "Your Monthly Update - {{month}}",
     mockData: {
       month: "October 2025",
@@ -116,8 +119,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       articles: [
         {
           title: "New Dashboard Design",
-          summary:
-            "We've completely redesigned our dashboard for better analytics.",
+          summary: "We've completely redesigned our dashboard for better analytics.",
         },
         {
           title: "Faster Exports",
@@ -125,7 +127,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
         },
       ],
     },
-    htmlBody: `<!DOCTYPE html>
+    layoutHtmlBody: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -152,16 +154,7 @@ export const predefinedTemplates: PredefinedTemplate[] = [
       <p>The latest news and updates for {{month}}</p>
     </div>
     <div class="content">
-      <p style="font-size: 16px; margin-bottom: 32px;">Here's everything we've been working on this month to help you grow your business.</p>
-      
-      {{#each articles}}
-      <div class="article">
-        <h3>{{this.title}}</h3>
-        <p>{{this.summary}}</p>
-        <a href="{{../readMoreUrl}}" class="read-more">Read Full Story &rarr;</a>
-      </div>
-      {{/each}}
-      
+      {{{@content}}}
     </div>
     <div class="footer">
       <p>&copy; 2025 Our Company. All rights reserved.</p>
@@ -170,5 +163,14 @@ export const predefinedTemplates: PredefinedTemplate[] = [
   </div>
 </body>
 </html>`,
+    htmlBody: `<p style="font-size: 16px; margin-bottom: 32px;">Here's everything we've been working on this month to help you grow your business.</p>
+
+{{#each articles}}
+<div class="article">
+  <h3>{{this.title}}</h3>
+  <p>{{this.summary}}</p>
+  <a href="{{../readMoreUrl}}" class="read-more">Read Full Story &rarr;</a>
+</div>
+{{/each}}`
   },
 ];
