@@ -1,8 +1,11 @@
-import { useMemo, useState, useRef } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useMemo, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
+import { AppTour } from "@/components/AppTour";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +24,9 @@ export default function TemplatesPage() {
     useTemplates();
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"templates" | "layouts">("templates");
+  const [activeTab, setActiveTab] = useState<"templates" | "layouts">(
+    "templates",
+  );
   const {
     layouts,
     createLayout,
@@ -130,7 +135,13 @@ export default function TemplatesPage() {
     }
   };
 
-  const isTemplates = tab === "templates";
+  const handleTabChange = useCallback((val: string) => {
+    setActiveTab(val as "templates" | "layouts");
+    setSearch("");
+    setConfirmDeleteId(null);
+  }, []);
+
+  const isTemplates = activeTab === "templates";
   const items = isTemplates ? filteredTemplates : filteredLayouts;
   const loading = isTemplates ? isLoading : layoutsLoading;
 
@@ -222,8 +233,9 @@ export default function TemplatesPage() {
 
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight text-fg">
-            PreviewMail
+          <Logo className="h-7 w-7" />
+          <span className="text-[17px] font-semibold tracking-tight text-fg">
+            PreviewEmail
           </span>
           <span className="text-fg-faint">/</span>
           <span className="text-[13px] font-medium text-fg-secondary">
@@ -252,22 +264,31 @@ export default function TemplatesPage() {
               "inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-bg px-3 text-[13px] font-medium transition-colors",
               isImporting
                 ? "cursor-wait text-fg-muted opacity-60"
-                : "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
+                : "text-fg-secondary hover:bg-bg-subtle hover:text-fg",
             )}
             title="Import data"
           >
             <Upload className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Import</span>
           </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={(e) => void handleImport(e)} 
-            accept=".json" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={(e) => void handleImport(e)}
+            accept=".json"
+            className="hidden"
           />
           <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+          <AppTour />
           <button
+            id="tour-library-btn"
+            onClick={() => navigate("/library")}
+            className="inline-flex h-8 items-center rounded-md border border-border bg-bg px-3.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg mr-1"
+          >
+            Library
+          </button>
+          <button
+            id="tour-new-btn"
             onClick={() =>
               void (isTemplates ? handleCreateTemplate() : handleCreateLayout())
             }
@@ -281,19 +302,20 @@ export default function TemplatesPage() {
 
       <main className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-4 py-5">
         <div className="flex items-center gap-2 justify-between">
-          <Tabs
-            value={tab}
-            onValueChange={(val) => {
-              setTab(val as "templates" | "layouts");
-              setSearch("");
-              setConfirmDeleteId(null);
-            }}
-          >
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-9">
-              <TabsTrigger value="templates" className="text-xs px-4">
+              <TabsTrigger
+                id="tour-templates-tab"
+                value="templates"
+                className="text-xs px-4"
+              >
                 Templates
               </TabsTrigger>
-              <TabsTrigger value="layouts" className="text-xs px-4">
+              <TabsTrigger
+                id="tour-layouts-tab"
+                value="layouts"
+                className="text-xs px-4"
+              >
                 Layouts
               </TabsTrigger>
             </TabsList>

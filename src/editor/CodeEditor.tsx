@@ -37,8 +37,7 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
 
   const handleChange = useCallback(
     (val: string) => {
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => onChange(val), 200);
+      onChange(val);
     },
     [onChange],
   );

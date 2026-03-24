@@ -5,9 +5,11 @@ import { clsx } from "clsx";
 import { Settings, Paintbrush, Maximize, Minimize } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
 import { SettingsModal } from "@/components/SettingsModal";
 import { SendTestModal } from "@/components/SendTestModal";
 import { EditorPanel } from "@/editor/EditorPanel";
+import { EditorTour } from "@/components/EditorTour";
 import { MockDataEditor } from "@/mockdata/MockDataEditor";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
@@ -387,6 +389,7 @@ export default function TemplateEditorPage() {
       {!editorMaximized && (
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Logo className="h-7 w-7" />
           <button
             onClick={() => navigate("/templates")}
             className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
@@ -473,6 +476,7 @@ export default function TemplateEditorPage() {
 
           {isEditingTemplate && (
             <button
+              id="tour-editor-save"
               onClick={() => void handleSaveTemplate()}
               className="inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
               aria-label="Save"
@@ -497,6 +501,7 @@ export default function TemplateEditorPage() {
               <Settings className="h-4 w-4" />
             </button>
             <ThemeToggle />
+            <EditorTour />
           </div>
         </div>
       </header>
@@ -520,6 +525,7 @@ export default function TemplateEditorPage() {
                   Edit
                 </button>
                 <button
+                  id="tour-editor-preview-tab"
                   onClick={() => setTemplateEditorMainTab("preview")}
                   className={clsx(
                     "relative h-10 px-3 text-[13px] font-medium transition-colors",
@@ -597,11 +603,11 @@ export default function TemplateEditorPage() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 flex flex-col">
+            <div id="tour-editor-code" className="min-h-0 flex-1 flex flex-col">
               {templateEditorMainTab === "edit" ? (
                 <EditorPanel
                   htmlBody={htmlBody}
-                  onHtmlChange={(v) => {
+                  onHtmlChange={(v: string) => {
                     setHtmlBody(v);
                     setIsTemplateDirty(true);
                     setIsMockDataDirty(false);

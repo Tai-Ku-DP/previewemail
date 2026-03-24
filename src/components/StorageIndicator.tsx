@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from "react";
 import { Database } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -8,7 +9,11 @@ export function StorageIndicator() {
   const [loading, setLoading] = useState(true);
 
   const refreshStorage = () => {
-    if (typeof navigator !== "undefined" && "storage" in navigator && "estimate" in navigator.storage) {
+    if (
+      typeof navigator !== "undefined" &&
+      "storage" in navigator &&
+      "estimate" in navigator.storage
+    ) {
       navigator.storage.estimate().then((estimate) => {
         if (estimate.usage !== undefined && estimate.quota !== undefined) {
           setUsage(estimate.usage);
@@ -29,7 +34,10 @@ export function StorageIndicator() {
 
   if (loading) {
     return (
-      <div className="flex h-8 items-center justify-center w-[120px]" title="Calculating storage...">
+      <div
+        className="flex h-8 items-center justify-center w-[120px]"
+        title="Calculating storage..."
+      >
         <Database className="h-3 w-3 text-fg-muted animate-pulse" />
       </div>
     );
@@ -42,7 +50,7 @@ export function StorageIndicator() {
   } else {
     percentageDisplay = `${Math.min(100, Math.round(rawPercentage))}%`;
   }
-  
+
   const progressValue = Math.min(100, Math.max(0, rawPercentage));
 
   const formatBytes = (bytes: number) => {
@@ -56,8 +64,8 @@ export function StorageIndicator() {
   const usageFormatted = formatBytes(usage);
 
   return (
-    <div 
-      className="group flex flex-col justify-center gap-1.5 w-[120px] rounded-md px-2 py-1 transition-colors hover:bg-bg-subtle cursor-default" 
+    <div
+      className="group flex flex-col justify-center gap-1.5 w-[120px] rounded-md px-2 py-1 transition-colors hover:bg-bg-subtle cursor-default"
       title={`IndexedDB Storage: ${usageFormatted} used`}
     >
       <div className="flex items-center justify-between text-[11px] font-medium text-fg-muted group-hover:text-fg transition-colors">
@@ -67,7 +75,7 @@ export function StorageIndicator() {
         </div>
         <span>{percentageDisplay}</span>
       </div>
-      <Progress value={progressValue} className="h-1 bg-bg-inset" />
+      <Progress value={progressValue} className="h-1" />
     </div>
   );
 }
