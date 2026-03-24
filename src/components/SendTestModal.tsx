@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { toast } from "sonner";
 import { clsx } from "clsx";
+import { X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { SESSettings } from "@/types";
 import { sendTestEmail } from "@/lib/ses";
 
@@ -87,19 +89,7 @@ export const SendTestModal = ({
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
             aria-label="Close"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -125,7 +115,7 @@ export const SendTestModal = ({
             <label className="mb-1.5 block text-[13px] font-medium text-fg">
               Recipient
             </label>
-            <input
+            <Input
               type="email"
               value={to}
               onChange={(e) => setTo(e.target.value)}

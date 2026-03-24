@@ -2,13 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
+import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditorPanel } from "@/editor/EditorPanel";
+import { EditorTour } from "@/components/EditorTour";
 import { MockDataEditor } from "@/mockdata/MockDataEditor";
 import { useLayouts } from "@/hooks/useLayouts";
 import { useMockData } from "@/hooks/useMockData";
 import { useEditorStore } from "@/stores/editorStore";
 import { buildMockDataSkeleton, compileTemplate } from "@/lib/handlebars";
+import { formatHtml } from "@/lib/formatter";
+import { Paintbrush, Maximize, Minimize } from "lucide-react";
 
 export default function LayoutEditorPage() {
   const navigate = useNavigate();
@@ -22,7 +26,8 @@ export default function LayoutEditorPage() {
   const togglePreviewMockData = useEditorStore((s) => s.togglePreviewMockData);
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorMaximized = useEditorStore((s) => s.editorMaximized);
+
 
   const [layoutName, setLayoutName] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -91,23 +96,30 @@ export default function LayoutEditorPage() {
     };
 
     let current: Record<string, unknown> = {};
+    let isParsable = true;
     try {
       current = JSON.parse(mockDataJson) as Record<string, unknown>;
     } catch {
-      current = {};
+      isParsable = false;
     }
+
+    if (!isParsable) return;
 
     const filled: Record<string, unknown> = { ...current };
     const skeleton = buildMockDataSkeleton(htmlBody);
     mergeDeep(filled, skeleton);
-    const nextJson = JSON.stringify(filled, null, 2);
-    if (nextJson !== mockDataJson) {
-      queueMicrotask(() => {
-        setMockDataJson(nextJson);
-        updateFromJson(nextJson);
-      });
+    
+    if (JSON.stringify(filled) !== JSON.stringify(current)) {
+      const nextJson = JSON.stringify(filled, null, 2);
+      if (nextJson !== mockDataJson) {
+        queueMicrotask(() => {
+          setMockDataJson(nextJson);
+          updateFromJson(nextJson);
+        });
+      }
     }
-  }, [mainTab, htmlBody, mockDataJson, updateFromJson]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab, htmlBody]);
 
   const { renderedHtml, compileError } = useMemo(() => {
     const placeholder = `
@@ -176,26 +188,16 @@ export default function LayoutEditorPage() {
   }, [handleSaveLayout, htmlBody]);
 
   useEffect(() => {
-    if (!isDirty) {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-      return;
-    }
+    if (!isDirty) return;
 
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(() => {
-      if (saveInProgress.current) return;
-      saveInProgress.current = true;
-      void handleSaveLayout().finally(() => {
-        saveInProgress.current = false;
-      });
-    }, 4000);
-
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Changes you made may not be saved.";
     };
-  }, [isDirty, handleSaveLayout, layoutName, htmlBody, textBody]);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   if (!layoutId) return <Navigate to="/templates" replace />;
   const layoutExists = layouts.some((l) => l.id === layoutId);
@@ -205,7 +207,7 @@ export default function LayoutEditorPage() {
   const isEditingLayout = Boolean(selectedLayout);
 
   return (
-    <div className="flex h-screen flex-col bg-bg overflow-auto">
+    <div className="flex h-screen flex-col bg-bg overflow-hidden">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -220,54 +222,66 @@ export default function LayoutEditorPage() {
         }}
       />
 
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            onClick={() => navigate("/templates")}
-            className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-            aria-label="Back to templates"
-          >
-            ← Templates
-          </button>
-
-          {isEditingLayout && (
-            <>
-              <span className="text-fg-faint">/</span>
-              <input
-                type="text"
-                value={layoutName}
-                onChange={(e) => {
-                  setLayoutName(e.target.value);
-                  setDirty(true);
-                }}
-                className="h-7 w-56 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
-                aria-label="Layout name"
-              />
-            </>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          {isEditingLayout && (
+      {!editorMaximized && (
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Logo className="h-7 w-7" />
             <button
-              onClick={() => void handleSaveLayout()}
-              className={clsx(
-                "inline-flex h-8 items-center rounded-md px-3.5 text-[13px] font-medium transition-opacity",
-                isDirty
-                  ? "bg-fg text-bg hover:opacity-90"
-                  : "border border-border bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg",
-              )}
-              aria-label="Save layout"
-              title="Save (Ctrl+S / Cmd+S)"
+              onClick={() => {
+                if (isDirty) {
+                  if (!window.confirm("Changes you made may not be saved. Are you sure you want to leave?")) {
+                    return;
+                  }
+                }
+                navigate("/templates");
+              }}
+              className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+              aria-label="Back to templates"
             >
-              {justSaved && !isDirty ? "Saved ✓" : "Save"}
+              ← Templates
             </button>
-          )}
-          <ThemeToggle />
-        </div>
-      </header>
 
-      <div className="min-h-0 flex-1">
+            {isEditingLayout && (
+              <>
+                <span className="text-fg-faint">/</span>
+                <input
+                  type="text"
+                  value={layoutName}
+                  onChange={(e) => {
+                    setLayoutName(e.target.value);
+                    setDirty(true);
+                  }}
+                  className="h-7 w-56 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                  aria-label="Layout name"
+                />
+              </>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {isEditingLayout && (
+              <button
+                id="tour-editor-save"
+                onClick={() => void handleSaveLayout()}
+                className={clsx(
+                  "inline-flex h-8 items-center rounded-md px-3.5 text-[13px] font-medium transition-opacity",
+                  isDirty
+                    ? "bg-fg text-bg hover:opacity-90"
+                    : "border border-border bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg",
+                )}
+                aria-label="Save layout"
+                title="Save (Ctrl+S / Cmd+S)"
+              >
+                {justSaved && !isDirty ? "Saved ✓" : "Save"}
+              </button>
+            )}
+            <ThemeToggle />
+            <EditorTour />
+          </div>
+        </header>
+      )}
+
+      <div className="flex min-h-0 flex-1">
         {isEditingLayout ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex h-10 shrink-0 items-end justify-between border-b border-border bg-bg px-2">
@@ -285,6 +299,7 @@ export default function LayoutEditorPage() {
                   Edit
                 </button>
                 <button
+                  id="tour-editor-preview-tab"
                   onClick={() => setMainTab("preview")}
                   className={clsx(
                     "relative h-10 px-3 text-[13px] font-medium transition-colors",
@@ -298,15 +313,84 @@ export default function LayoutEditorPage() {
                 </button>
               </div>
 
-              <div className="mb-1.5 mr-1 text-[11px] text-fg-muted">
-                <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
-                  ⌘/
-                </kbd>{" "}
-                switch tab
+              <div className="mb-1.5 mr-1 flex items-center gap-4">
+                <div className="text-[11px] text-fg-muted">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
+                    ⌘/
+                  </kbd>{" "}
+                  switch tab
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {mainTab === "preview" && (
+                    <button
+                      onClick={togglePreviewMockData}
+                      className="inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+                      aria-label={
+                        previewMockDataOpen
+                          ? "Hide mock data"
+                          : "Show mock data"
+                      }
+                    >
+                      {previewMockDataOpen
+                        ? "Hide mock data"
+                        : "Show mock data"}
+                    </button>
+                  )}
+                  {mainTab === "edit" && (
+                    <button
+                      onClick={() => {
+                        if (!htmlBody.trim()) return;
+                        void formatHtml(htmlBody)
+                          .then((formatted) => {
+                            setHtmlBody(formatted);
+                            setDirty(true);
+                            toast.success("HTML formatted");
+                          })
+                          .catch(() =>
+                            toast.error(
+                              "Format failed — check Handlebars syntax",
+                            ),
+                          );
+                      }}
+                      disabled={!htmlBody.trim()}
+                      className={clsx(
+                        "inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium transition-colors",
+                        !htmlBody.trim()
+                          ? "opacity-50 cursor-not-allowed text-fg-muted bg-bg-subtle"
+                          : "bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg",
+                      )}
+                      aria-label="Format code"
+                      title="Format HTML (Shift+Alt+F)"
+                    >
+                      <Paintbrush className="h-3.5 w-3.5" />
+                      Format
+                    </button>
+                  )}
+                  <button
+                    onClick={() =>
+                      useEditorStore.getState().toggleEditorMaximized()
+                    }
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-bg text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg"
+                    aria-label={
+                      editorMaximized ? "Exit fullscreen" : "Fullscreen editor"
+                    }
+                    title={
+                      editorMaximized
+                        ? "Exit fullscreen (Esc)"
+                        : "Fullscreen editor"
+                    }
+                  >
+                    {editorMaximized ? (
+                      <Minimize className="h-4 w-4" />
+                    ) : (
+                      <Maximize className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="min-h-0 flex-1">
+            <div id="tour-editor-code" className="min-h-0 flex-1 flex flex-col">
               {mainTab === "edit" ? (
                 <EditorPanel
                   htmlBody={htmlBody}
@@ -328,25 +412,6 @@ export default function LayoutEditorPage() {
                         : "100%",
                     }}
                   >
-                    <div className="flex h-10 items-end justify-between border-b border-border bg-bg px-2">
-                      <div className="px-3 text-[12px] text-fg-muted">
-                        Layout Preview
-                      </div>
-                      <button
-                        onClick={togglePreviewMockData}
-                        className="mb-1.5 mr-1 inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-                        aria-label={
-                          previewMockDataOpen
-                            ? "Hide mock data"
-                            : "Show mock data"
-                        }
-                      >
-                        {previewMockDataOpen
-                          ? "Hide mock data"
-                          : "Show mock data"}
-                      </button>
-                    </div>
-
                     <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
                       {compileError && (
                         <div className="shrink-0 border-b border-danger/20 bg-danger/5 px-3 py-2 text-[13px] text-danger">
@@ -357,7 +422,7 @@ export default function LayoutEditorPage() {
                         srcDoc={previewSrcDoc}
                         sandbox="allow-same-origin"
                         title="Layout Preview"
-                        className="h-full min-h-0 flex-1 w-full border-0 bg-white"
+                        className="h-full min-h-0 flex-1 w-full border-0 bg-[#f8fafc]"
                       />
                     </div>
                   </div>
@@ -403,7 +468,7 @@ export default function LayoutEditorPage() {
                       </div>
 
                       <div
-                        className="min-w-0 flex flex-col border-l border-border bg-bg"
+                        className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
                         style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
                       >
                         <MockDataEditor

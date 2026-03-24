@@ -1,5 +1,5 @@
-import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
-import type { SESSettings } from '@/types';
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import type { SESSettings } from "@/types";
 
 interface SendTestParams {
   to: string;
@@ -23,10 +23,10 @@ export async function sendTestEmail(params: SendTestParams): Promise<void> {
     Destination: { ToAddresses: [params.to] },
     Content: {
       Simple: {
-        Subject: { Data: params.subject, Charset: 'UTF-8' },
+        Subject: { Data: params.subject, Charset: "UTF-8" },
         Body: {
-          Html: { Data: params.html, Charset: 'UTF-8' },
-          Text: { Data: params.text, Charset: 'UTF-8' },
+          Html: { Data: params.html, Charset: "UTF-8" },
+          Text: { Data: params.text, Charset: "UTF-8" },
         },
       },
     },

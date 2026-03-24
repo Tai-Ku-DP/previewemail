@@ -2,10 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
+import { Settings, Paintbrush, Maximize, Minimize } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
 import { SettingsModal } from "@/components/SettingsModal";
 import { SendTestModal } from "@/components/SendTestModal";
 import { EditorPanel } from "@/editor/EditorPanel";
+import { EditorTour } from "@/components/EditorTour";
 import { MockDataEditor } from "@/mockdata/MockDataEditor";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useLayouts } from "@/hooks/useLayouts";
@@ -15,6 +19,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useEditorStore } from "@/stores/editorStore";
 import { formatHtml, formatJson } from "@/lib/formatter";
 import { buildMockDataSkeleton } from "@/lib/handlebars";
+import { StorageIndicator } from "@/components/StorageIndicator";
 import type { Layout } from "@/types";
 
 export default function TemplateEditorPage() {
@@ -51,7 +56,7 @@ export default function TemplateEditorPage() {
   const [sendTestOpen, setSendTestOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   // Template editing state
   const [htmlBody, setHtmlBody] = useState("");
@@ -60,8 +65,6 @@ export default function TemplateEditorPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
-  const [isTemplateDirty, setIsTemplateDirty] = useState(false);
-  const [isMockDataDirty, setIsMockDataDirty] = useState(false);
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -83,17 +86,15 @@ export default function TemplateEditorPage() {
       setMockDataJson(json);
       reset(selectedTemplate.mockData);
       setDirty(false);
-      setIsTemplateDirty(false);
-      setIsMockDataDirty(false);
     });
   }, [selectedTemplate, reset, setDirty]);
 
   const activeLayout: Layout | undefined = useMemo(() => {
     if (templateLayoutId) return getLayoutById(templateLayoutId);
     return undefined;
-  }, [templateLayoutId, getLayoutById]);
+  }, [templateLayoutId, getLayoutById, layouts]);
 
-  const { renderedHtml, compileError, compiledSubject } = usePreview(
+  const { renderedHtml, compiledSubject } = usePreview(
     htmlBody,
     subject,
     mockData,
@@ -110,7 +111,6 @@ export default function TemplateEditorPage() {
       setMockDataJson(value);
       updateFromJson(value);
       setDirty(true);
-      setIsMockDataDirty(true);
     },
     [updateFromJson, setDirty],
   );
@@ -146,11 +146,15 @@ export default function TemplateEditorPage() {
     };
 
     let current: Record<string, unknown> = {};
+    let isParsable = true;
     try {
       current = JSON.parse(mockDataJson) as Record<string, unknown>;
     } catch {
-      current = {};
+      isParsable = false;
     }
+
+    // Do not format or touch user's JSON if they are in the middle of typing an invalid structure
+    if (!isParsable) return;
 
     const filled: Record<string, unknown> = { ...current };
 
@@ -160,23 +164,20 @@ export default function TemplateEditorPage() {
     if (activeLayout?.htmlBody) {
       mergeDeep(filled, buildMockDataSkeleton(activeLayout.htmlBody));
     }
-    const nextJson = JSON.stringify(filled, null, 2);
-    if (nextJson !== mockDataJson) {
-      queueMicrotask(() => {
-        setMockDataJson(nextJson);
-        updateFromJson(nextJson);
-        setDirty(true);
-        setIsMockDataDirty(true);
-      });
+    
+    // Only auto-format and update if new skeleton keys were actually recursively added
+    if (JSON.stringify(filled) !== JSON.stringify(current)) {
+      const nextJson = JSON.stringify(filled, null, 2);
+      if (nextJson !== mockDataJson) {
+        queueMicrotask(() => {
+          setMockDataJson(nextJson);
+          updateFromJson(nextJson);
+          setDirty(true);
+        });
+      }
     }
-  }, [
-    templateEditorMainTab,
-    htmlBody,
-    activeLayout?.htmlBody,
-    mockDataJson,
-    updateFromJson,
-    setDirty,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateEditorMainTab, htmlBody, activeLayout?.htmlBody]); // INTENTIONALLY EXCLUDING mockDataJson!
 
   const handleSaveTemplate = useCallback(
     async (overrides?: {
@@ -208,8 +209,6 @@ export default function TemplateEditorPage() {
         }
         toast.success("Template saved");
         setDirty(false);
-        setIsTemplateDirty(false);
-        setIsMockDataDirty(false);
         setJustSaved(true);
         window.setTimeout(() => setJustSaved(false), 2000);
       } catch {
@@ -232,35 +231,16 @@ export default function TemplateEditorPage() {
   );
 
   useEffect(() => {
-    const mockDataOnlyDirty = isMockDataDirty && !isTemplateDirty;
-    if (!isDirty || templateEditorMainTab !== "preview" || mockDataOnlyDirty) {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-      return;
-    }
+    if (!isDirty) return;
 
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(() => {
-      void handleSaveTemplate();
-    }, 4000);
-
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Changes you made may not be saved.";
     };
-  }, [
-    isDirty,
-    templateEditorMainTab,
-    isTemplateDirty,
-    isMockDataDirty,
-    handleSaveTemplate,
-    htmlBody,
-    textBody,
-    subject,
-    templateName,
-    templateLayoutId,
-    mockDataJson,
-  ]);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const handleSendTest = useCallback(() => {
     if (!isConfigured) return;
@@ -312,8 +292,6 @@ export default function TemplateEditorPage() {
           void formatHtml(htmlBody)
             .then((formatted) => {
               setHtmlBody(formatted);
-              setIsTemplateDirty(true);
-              setIsMockDataDirty(false);
               setDirty(true);
               toast.success("HTML formatted");
             })
@@ -347,7 +325,7 @@ export default function TemplateEditorPage() {
   const isEditingTemplate = Boolean(selectedTemplate);
 
   return (
-    <div className="flex h-screen flex-col bg-bg overflow-auto">
+    <div className="flex h-screen flex-col bg-bg overflow-hidden">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -381,10 +359,19 @@ export default function TemplateEditorPage() {
         />
       )}
 
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+      {!editorMaximized && (
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Logo className="h-7 w-7" />
           <button
-            onClick={() => navigate("/templates")}
+            onClick={() => {
+              if (isDirty) {
+                if (!window.confirm("Changes you made may not be saved. Are you sure you want to leave?")) {
+                  return;
+                }
+              }
+              navigate("/templates");
+            }}
             className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
             aria-label="Back to templates"
           >
@@ -394,30 +381,26 @@ export default function TemplateEditorPage() {
           {isEditingTemplate && (
             <>
               <span className="text-fg-faint">/</span>
-              <input
+              <Input
                 type="text"
                 value={templateName}
                 onChange={(e) => {
                   setTemplateName(e.target.value);
-                  setIsTemplateDirty(true);
-                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
-                className="h-7 w-48 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                className="h-7 w-48 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
                 aria-label="Template name"
               />
               <span className="text-fg-faint">&middot;</span>
-              <input
+              <Input
                 type="text"
                 value={subject}
                 onChange={(e) => {
                   setSubject(e.target.value);
-                  setIsTemplateDirty(true);
-                  setIsMockDataDirty(false);
                   setDirty(true);
                 }}
                 placeholder="Subject line {{variables}}"
-                className="h-7 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary placeholder:text-fg-muted transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                className="h-7 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary shadow-none placeholder:text-fg-muted transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
                 aria-label="Email subject"
               />
             </>
@@ -430,8 +413,6 @@ export default function TemplateEditorPage() {
               value={templateLayoutId ?? ""}
               onChange={(e) => {
                 setTemplateLayoutId(e.target.value || null);
-                setIsTemplateDirty(true);
-                setIsMockDataDirty(false);
                 setDirty(true);
               }}
               className="h-8 rounded-md border border-border bg-bg px-2 pr-7 text-[12px] text-fg-secondary transition-colors hover:bg-bg-subtle"
@@ -469,6 +450,7 @@ export default function TemplateEditorPage() {
 
           {isEditingTemplate && (
             <button
+              id="tour-editor-save"
               onClick={() => void handleSaveTemplate()}
               className="inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
               aria-label="Save"
@@ -479,34 +461,25 @@ export default function TemplateEditorPage() {
           )}
 
           <div className="ml-1 flex items-center gap-0.5">
+            <div className="hidden sm:block mr-1">
+              <StorageIndicator />
+            </div>
+
+            <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+
             <button
               onClick={() => setSettingsOpen(true)}
               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
               aria-label="Settings"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <Settings className="h-4 w-4" />
             </button>
             <ThemeToggle />
+            <EditorTour />
           </div>
         </div>
       </header>
+      )}
 
       <div className="flex min-h-0 flex-1">
         {isEditingTemplate ? (
@@ -526,6 +499,7 @@ export default function TemplateEditorPage() {
                   Edit
                 </button>
                 <button
+                  id="tour-editor-preview-tab"
                   onClick={() => setTemplateEditorMainTab("preview")}
                   className={clsx(
                     "relative h-10 px-3 text-[13px] font-medium transition-colors",
@@ -539,31 +513,80 @@ export default function TemplateEditorPage() {
                 </button>
               </div>
 
-              <div className="mb-1.5 mr-1 text-[11px] text-fg-muted">
-                <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
-                  ⌘/
-                </kbd>{" "}
-                switch tab
+              <div className="flex items-center gap-4 items-center mb-1">
+                <div className="text-[11px] text-fg-muted">
+                  <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
+                    ⌘/
+                  </kbd>{" "}
+                  switch tab
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {templateEditorMainTab === "preview" && (
+                    <button
+                      onClick={togglePreviewMockData}
+                      className="inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+                      aria-label={
+                        previewMockDataOpen ? "Hide mock data" : "Show mock data"
+                      }
+                    >
+                      {previewMockDataOpen ? "Hide mock data" : "Show mock data"}
+                    </button>
+                  )}
+                  {templateEditorMainTab === "edit" && (
+                    <button
+                      onClick={() => {
+                        if (formatInProgress.current) return;
+                        formatInProgress.current = true;
+                        void formatHtml(htmlBody)
+                          .then((formatted) => {
+                            setHtmlBody(formatted);
+                            setDirty(true);
+                            toast.success("HTML formatted");
+                          })
+                          .catch(() => toast.error("Format failed — check Handlebars syntax"))
+                          .finally(() => {
+                            formatInProgress.current = false;
+                          });
+                      }}
+                      disabled={!htmlBody.trim()}
+                      className={clsx(
+                        'inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium transition-colors',
+                        (!htmlBody.trim())
+                          ? 'opacity-50 cursor-not-allowed text-fg-muted bg-bg-subtle'
+                          : 'bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg',
+                      )}
+                      aria-label="Format code"
+                      title="Format HTML (Shift+Alt+F)"
+                    >
+                      <Paintbrush className="h-3.5 w-3.5" />
+                      Format
+                    </button>
+                  )}
+                  <button
+                    onClick={() => useEditorStore.getState().toggleEditorMaximized()}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-bg text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg"
+                    aria-label={editorMaximized ? 'Exit fullscreen' : 'Fullscreen editor'}
+                    title={editorMaximized ? 'Exit fullscreen (Esc)' : 'Fullscreen editor'}
+                  >
+                    {editorMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="min-h-0 flex-1">
+            <div id="tour-editor-code" className="min-h-0 flex-1 flex flex-col">
               {templateEditorMainTab === "edit" ? (
                 <EditorPanel
                   htmlBody={htmlBody}
-                  onHtmlChange={(v) => {
+                  onHtmlChange={(v: string) => {
                     setHtmlBody(v);
-                    setIsTemplateDirty(true);
-                    setIsMockDataDirty(false);
                     setDirty(true);
                   }}
                 />
               ) : (
                 <div
-                  className={clsx(
-                    "flex min-h-0 flex-1 min-w-0 bg-bg-subtle",
-                    editorMaximized && "pointer-events-none",
-                  )}
+                  className="flex min-h-0 flex-1 min-w-0 bg-bg-subtle"
                   ref={previewSplitRef}
                 >
                   <div
@@ -574,40 +597,15 @@ export default function TemplateEditorPage() {
                         : "100%",
                     }}
                   >
-                    <div className="flex h-10 items-end justify-between border-b border-border bg-bg px-2">
-                      <div className="px-3 text-[12px] text-fg-muted">
-                        Email Preview
-                      </div>
-                      <button
-                        onClick={togglePreviewMockData}
-                        className="mb-1.5 mr-1 inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-                        aria-label={
-                          previewMockDataOpen
-                            ? "Hide mock data"
-                            : "Show mock data"
-                        }
-                      >
-                        {previewMockDataOpen
-                          ? "Hide mock data"
-                          : "Show mock data"}
-                      </button>
-                    </div>
-
                     <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
                       {compiledSubject && (
-                        <div className="shrink-0 border-b border-border bg-bg px-3 py-2">
-                          <span className="text-[11px] font-medium text-fg-muted">
-                            Subject
+                        <div className="shrink-0 border-b border-border sbg-bg px-3 py-2">
+                          <span className="text-[13px] font-medium text-fg-muted">
+                            Subject:
+                            <span className="mt-0.5 text-[13px] text-fg ml-2">
+                              {compiledSubject}
+                            </span>
                           </span>
-                          <p className="mt-0.5 text-[13px] text-fg">
-                            {compiledSubject}
-                          </p>
-                        </div>
-                      )}
-
-                      {compileError && (
-                        <div className="shrink-0 border-b border-danger/20 bg-danger/5 px-3 py-2 text-[13px] text-danger">
-                          {compileError}
                         </div>
                       )}
 
@@ -661,7 +659,7 @@ export default function TemplateEditorPage() {
                       </div>
 
                       <div
-                        className="min-w-0 flex flex-col border-l border-border bg-bg"
+                        className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
                         style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
                       >
                         <MockDataEditor

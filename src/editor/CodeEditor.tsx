@@ -32,34 +32,35 @@ export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
             htmlLinter,
           ]
         : [indentUnit.of("  "), EditorView.lineWrapping],
-    [tab]
+    [tab],
   );
 
   const handleChange = useCallback(
     (val: string) => {
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => onChange(val), 200);
+      onChange(val);
     },
-    [onChange]
+    [onChange],
   );
 
   return (
-    <CodeMirror
-      ref={editorRef}
-      value={value}
-      extensions={extensions}
-      onChange={handleChange}
-      theme="dark"
-      className="h-full"
-      basicSetup={{
-        lineNumbers: true,
-        foldGutter: true,
-        highlightActiveLine: false,
-        highlightActiveLineGutter: false,
-        autocompletion: true,
-        closeBrackets: true,
-        tabSize: 2,
-      }}
-    />
+    <div className="min-h-0 flex-1 overflow-hidden">
+      <CodeMirror
+        ref={editorRef}
+        value={value}
+        extensions={extensions}
+        onChange={handleChange}
+        theme="dark"
+        className="h-full"
+        basicSetup={{
+          lineNumbers: true,
+          foldGutter: true,
+          highlightActiveLine: false,
+          highlightActiveLineGutter: false,
+          autocompletion: true,
+          closeBrackets: true,
+          tabSize: 2,
+        }}
+      />
+    </div>
   );
 };
