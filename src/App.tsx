@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import TemplatesPage from '@/views/TemplatesPage';
 import TemplateEditorPage from '@/views/TemplateEditorPage';
 import LayoutEditorPage from "@/views/LayoutEditorPage";
@@ -6,20 +6,20 @@ import TemplateLibraryPage from "@/views/TemplateLibraryPage";
 import HomePage from "@/views/index";
 import { AppInit } from "@/components/AppInit";
 
+const router = createBrowserRouter([
+  { path: "/", element: <HomePage /> },
+  { path: "/templates", element: <TemplatesPage /> },
+  { path: "/library", element: <TemplateLibraryPage /> },
+  { path: "/templates/:templateId", element: <TemplateEditorPage /> },
+  { path: "/layouts/:layoutId", element: <LayoutEditorPage /> },
+  { path: "*", element: <Navigate to="/templates" replace /> },
+]);
+
 export default function App() {
   return (
     <>
       <AppInit />
-      <BrowserRouter>
-        <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        <Route path="/library" element={<TemplateLibraryPage />} />
-        <Route path="/templates/:templateId" element={<TemplateEditorPage />} />
-        <Route path="/layouts/:layoutId" element={<LayoutEditorPage />} />
-        <Route path="*" element={<Navigate to="/templates" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </>
   );
 }

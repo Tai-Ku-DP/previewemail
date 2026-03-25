@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useParams, useBlocker } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
 import { Logo } from "@/components/Logo";
@@ -15,7 +15,6 @@ import { formatHtml } from "@/lib/formatter";
 import { Paintbrush, Maximize, Minimize } from "lucide-react";
 
 export default function LayoutEditorPage() {
-  const navigate = useNavigate();
   const { layoutId } = useParams<{ layoutId: string }>();
 
   const { layouts, selectedLayout, selectLayout, updateLayout } = useLayouts();
@@ -27,7 +26,6 @@ export default function LayoutEditorPage() {
   const previewSplit = useEditorStore((s) => s.previewSplit);
   const setPreviewSplit = useEditorStore((s) => s.setPreviewSplit);
   const editorMaximized = useEditorStore((s) => s.editorMaximized);
-
 
   const [layoutName, setLayoutName] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -108,7 +106,7 @@ export default function LayoutEditorPage() {
     const filled: Record<string, unknown> = { ...current };
     const skeleton = buildMockDataSkeleton(htmlBody);
     mergeDeep(filled, skeleton);
-    
+
     if (JSON.stringify(filled) !== JSON.stringify(current)) {
       const nextJson = JSON.stringify(filled, null, 2);
       if (nextJson !== mockDataJson) {
@@ -188,9 +186,8 @@ export default function LayoutEditorPage() {
   }, [handleSaveLayout, htmlBody]);
 
   useEffect(() => {
-    if (!isDirty) return;
-
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
       e.preventDefault();
       e.returnValue = "Changes you made may not be saved.";
     };
@@ -198,6 +195,16 @@ export default function LayoutEditorPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
+
+  useBlocker(({ currentLocation, nextLocation }) => {
+    if (!isDirty) return false;
+    if (currentLocation.pathname !== nextLocation.pathname) {
+      return !window.confirm(
+        "Changes you made may not be saved. Are you sure you want to leave?",
+      );
+    }
+    return false;
+  });
 
   if (!layoutId) return <Navigate to="/templates" replace />;
   const layoutExists = layouts.some((l) => l.id === layoutId);
@@ -223,38 +230,21 @@ export default function LayoutEditorPage() {
       />
 
       {!editorMaximized && (
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Logo className="h-7 w-7" />
-            <button
-              onClick={() => {
-                if (isDirty) {
-                  if (!window.confirm("Changes you made may not be saved. Are you sure you want to leave?")) {
-                    return;
-                  }
-                }
-                navigate("/templates");
-              }}
-              className="inline-flex h-8 items-center rounded-md px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
-              aria-label="Back to templates"
-            >
-              ← Templates
-            </button>
+            <Logo />
 
             {isEditingLayout && (
-              <>
-                <span className="text-fg-faint">/</span>
-                <input
-                  type="text"
-                  value={layoutName}
-                  onChange={(e) => {
-                    setLayoutName(e.target.value);
-                    setDirty(true);
-                  }}
-                  className="h-7 w-56 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
-                  aria-label="Layout name"
-                />
-              </>
+              <input
+                type="text"
+                value={layoutName}
+                onChange={(e) => {
+                  setLayoutName(e.target.value);
+                  setDirty(true);
+                }}
+                className="h-7 w-56 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                aria-label="Layout name"
+              />
             )}
           </div>
 

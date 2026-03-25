@@ -35,7 +35,7 @@ export const MockDataEditor = ({
     <div className="flex h-full flex-col bg-bg">
       <div
         className={clsx(
-          "min-h-0 flex-1 overflow-auto transition-shadow bg-black",
+          "min-h-0 flex-1 overflow-auto transition-shadow",
           error ? "ring-1 ring-danger/40 ring-inset" : "",
         )}
       >
@@ -45,7 +45,7 @@ export const MockDataEditor = ({
           onChange={onChange}
           theme="dark"
           height="auto"
-          className="min-h-full"
+          className="h-full bg-[#282c34]"
           basicSetup={BASIC_SETUP}
         />
       </div>

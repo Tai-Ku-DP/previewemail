@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -41,34 +42,75 @@ function wrapIframeSrcDoc(html: string): string {
   return `<!doctype html><html><head>${style}</head><body>${safe}</body></html>`;
 }
 
-function TablePreviewThumb({ item, isTemplate, layouts }: { item: any, isTemplate: boolean, layouts: any[] }) {
+function TablePreviewThumb({
+  item,
+  isTemplate,
+  layouts,
+}: {
+  item: any;
+  isTemplate: boolean;
+  layouts: any[];
+}) {
   const html = useMemo(() => {
     if (!isTemplate) return item.htmlBody;
-    const layout = item.layoutId ? layouts.find((l) => l.id === item.layoutId) : null;
+    const layout = item.layoutId
+      ? layouts.find((l) => l.id === item.layoutId)
+      : null;
     if (layout) {
-      return compileWithLayout(item.htmlBody, layout.htmlBody, item.mockData || {}).result ?? "";
+      return (
+        compileWithLayout(item.htmlBody, layout.htmlBody, item.mockData || {})
+          .result ?? ""
+      );
     }
     return compileTemplate(item.htmlBody, item.mockData || {}).result ?? "";
   }, [item, isTemplate, layouts]);
-  
+
   return (
     <div className="h-14 w-24 overflow-hidden rounded-md border border-border bg-white relative shrink-0 shadow-sm">
-       <div style={{ width: "480px", height: "280px", transform: "scale(0.2)", transformOrigin: "top left" }} className="absolute">
-         <iframe srcDoc={wrapIframeSrcDoc(html)} className="w-full h-full border-0 pointer-events-none" tabIndex={-1} scrolling="no" sandbox="allow-same-origin" />
-       </div>
+      <div
+        style={{
+          width: "480px",
+          height: "280px",
+          transform: "scale(0.2)",
+          transformOrigin: "top left",
+        }}
+        className="absolute"
+      >
+        <iframe
+          srcDoc={wrapIframeSrcDoc(html)}
+          className="w-full h-full border-0 pointer-events-none"
+          tabIndex={-1}
+          scrolling="no"
+          sandbox="allow-same-origin"
+        />
+      </div>
     </div>
   );
 }
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const { templates, createTemplate, updateTemplate, deleteTemplate, isLoading } =
-    useTemplates();
+  const {
+    templates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    isLoading,
+  } = useTemplates();
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"templates" | "layouts">(
-    "templates",
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab =
+    (searchParams.get("tab") as "templates" | "layouts") || "templates";
+  const setActiveTab = (val: "templates" | "layouts") => {
+    setSearchParams(
+      (prev) => {
+        prev.set("tab", val);
+        return prev;
+      },
+      { replace: true },
+    );
+  };
   const {
     layouts,
     createLayout,
@@ -117,7 +159,8 @@ export default function TemplatesPage() {
     if (!q) return templates;
     return templates.filter(
       (t) =>
-        t.name.toLowerCase().includes(q) || (t.alias || "").toLowerCase().includes(q),
+        t.name.toLowerCase().includes(q) ||
+        (t.alias || "").toLowerCase().includes(q),
     );
   }, [templates, search]);
 
@@ -126,7 +169,8 @@ export default function TemplatesPage() {
     if (!q) return layouts;
     return layouts.filter(
       (l) =>
-        l.name.toLowerCase().includes(q) || (l.alias || "").toLowerCase().includes(q),
+        l.name.toLowerCase().includes(q) ||
+        (l.alias || "").toLowerCase().includes(q),
     );
   }, [layouts, search]);
 
@@ -156,68 +200,83 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDeleteTemplate = useCallback(async (id: string) => {
-    try {
-      await deleteTemplate(id);
-      toast.success("Template deleted");
-    } catch {
-      toast.error("Failed to delete template");
-    } finally {
+  const handleDeleteTemplate = useCallback(
+    async (id: string) => {
+      try {
+        await deleteTemplate(id);
+        toast.success("Template deleted");
+      } catch {
+        toast.error("Failed to delete template");
+      } finally {
+        setConfirmDeleteId(null);
+      }
+    },
+    [deleteTemplate],
+  );
+
+  const handleDeleteLayout = useCallback(
+    async (id: string) => {
+      try {
+        await deleteLayout(id);
+        toast.success("Layout deleted");
+      } catch {
+        toast.error("Failed to delete layout");
+      } finally {
+        setConfirmDeleteId(null);
+      }
+    },
+    [deleteLayout],
+  );
+
+  const handleDuplicateTemplate = useCallback(
+    async (template: any) => {
+      try {
+        const newTemplate = await createTemplate(
+          `${template.name} (Copy)`,
+          `${template.alias}-copy-${Date.now()}`,
+        );
+        await updateTemplate(newTemplate.id, {
+          htmlBody: template.htmlBody,
+          textBody: template.textBody,
+          subject: template.subject,
+          layoutId: template.layoutId,
+          mockData: template.mockData,
+        });
+        toast.success("Template duplicated");
+      } catch {
+        toast.error("Failed to duplicate template");
+      }
+    },
+    [createTemplate, updateTemplate],
+  );
+
+  const handleDuplicateLayout = useCallback(
+    async (layout: any) => {
+      try {
+        const newLayout = await createLayout(
+          `${layout.name} (Copy)`,
+          `${layout.alias}-copy-${Date.now()}`,
+        );
+        await updateLayout(newLayout.id, {
+          htmlBody: layout.htmlBody,
+          textBody: layout.textBody,
+        });
+        toast.success("Layout duplicated");
+      } catch {
+        toast.error("Failed to duplicate layout");
+      }
+    },
+    [createLayout, updateLayout],
+  );
+
+  const handleTabChange = useCallback(
+    (val: string) => {
+      setActiveTab(val as "templates" | "layouts");
+      setSearch("");
       setConfirmDeleteId(null);
-    }
-  }, [deleteTemplate]);
-
-  const handleDeleteLayout = useCallback(async (id: string) => {
-    try {
-      await deleteLayout(id);
-      toast.success("Layout deleted");
-    } catch {
-      toast.error("Failed to delete layout");
-    } finally {
-      setConfirmDeleteId(null);
-    }
-  }, [deleteLayout]);
-
-  const handleDuplicateTemplate = useCallback(async (template: any) => {
-    try {
-      const newTemplate = await createTemplate(
-        `${template.name} (Copy)`,
-        `${template.alias}-copy-${Date.now()}`
-      );
-      await updateTemplate(newTemplate.id, {
-        htmlBody: template.htmlBody,
-        textBody: template.textBody,
-        subject: template.subject,
-        layoutId: template.layoutId,
-        mockData: template.mockData,
-      });
-      toast.success("Template duplicated");
-    } catch {
-      toast.error("Failed to duplicate template");
-    }
-  }, [createTemplate, updateTemplate]);
-
-  const handleDuplicateLayout = useCallback(async (layout: any) => {
-    try {
-      const newLayout = await createLayout(
-        `${layout.name} (Copy)`,
-        `${layout.alias}-copy-${Date.now()}`
-      );
-      await updateLayout(newLayout.id, {
-        htmlBody: layout.htmlBody,
-        textBody: layout.textBody,
-      });
-      toast.success("Layout duplicated");
-    } catch {
-      toast.error("Failed to duplicate layout");
-    }
-  }, [createLayout, updateLayout]);
-
-  const handleTabChange = useCallback((val: string) => {
-    setActiveTab(val as "templates" | "layouts");
-    setSearch("");
-    setConfirmDeleteId(null);
-  }, []);
+    },
+    [setActiveTab],
+  );
 
   const isTemplates = activeTab === "templates";
   const items = isTemplates ? filteredTemplates : filteredLayouts;
@@ -230,13 +289,18 @@ export default function TemplatesPage() {
         header: "Name",
         cell: ({ row }) => {
           const item = row.original;
-          const layout = isTemplates && item.layoutId 
-            ? layouts.find(l => l.id === item.layoutId) 
-            : null;
+          const layout =
+            isTemplates && item.layoutId
+              ? layouts.find((l) => l.id === item.layoutId)
+              : null;
 
           return (
             <div className="flex items-center gap-4 min-w-0 py-1">
-              <TablePreviewThumb item={item} isTemplate={isTemplates} layouts={layouts} />
+              <TablePreviewThumb
+                item={item}
+                isTemplate={isTemplates}
+                layouts={layouts}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14.5px] font-medium text-fg">
                   {item.name}
@@ -246,7 +310,9 @@ export default function TemplatesPage() {
                   {layout && (
                     <>
                       <span className="text-border">&bull;</span>
-                      <span className="truncate text-fg-secondary">Layout: {layout.name}</span>
+                      <span className="truncate text-fg-secondary">
+                        Layout: {layout.name}
+                      </span>
                     </>
                   )}
                 </div>
@@ -287,25 +353,41 @@ export default function TemplatesPage() {
           }
 
           return (
-            <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex justify-end"
+              onClick={(e) => e.stopPropagation()}
+            >
               <DropdownMenu>
                 <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg">
                   <MoreHorizontal className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem onClick={() => navigate(isTemplates ? `/templates/${item.id}` : `/layouts/${item.id}`)}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      navigate(
+                        isTemplates
+                          ? `/templates/${item.id}`
+                          : `/layouts/${item.id}`,
+                      )
+                    }
+                  >
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    if (isTemplates) {
-                      void handleDuplicateTemplate(item);
-                    } else {
-                      void handleDuplicateLayout(item);
-                    }
-                  }}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isTemplates) {
+                        void handleDuplicateTemplate(item);
+                      } else {
+                        void handleDuplicateLayout(item);
+                      }
+                    }}
+                  >
                     Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-danger focus:text-danger focus:bg-danger/10" onClick={() => setConfirmDeleteId(item.id)}>
+                  <DropdownMenuItem
+                    className="text-danger focus:text-danger focus:bg-danger/10"
+                    onClick={() => setConfirmDeleteId(item.id)}
+                  >
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -323,7 +405,7 @@ export default function TemplatesPage() {
       handleDeleteTemplate,
       handleDeleteLayout,
       navigate,
-      layouts
+      layouts,
     ],
   );
 
@@ -343,16 +425,9 @@ export default function TemplatesPage() {
         }}
       />
 
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex items-center gap-2">
-          <Logo className="h-7 w-7" />
-          <span className="text-[17px] font-semibold tracking-tight text-fg">
-            PreviewEmail
-          </span>
-          <span className="text-fg-faint">/</span>
-          <span className="text-[13px] font-medium text-fg-secondary">
-            {isTemplates ? "Templates" : "Layouts"}
-          </span>
+          <Logo />
         </div>
 
         <div className="flex items-center gap-1.5">
