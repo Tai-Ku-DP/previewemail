@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { EditorSelection } from "@codemirror/state";
 import { autoCloseTags, html } from "@codemirror/lang-html";
 import { indentUnit } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
@@ -11,6 +12,7 @@ interface CodeEditorProps {
   value: string;
   tab: EditorTab;
   onChange: (value: string) => void;
+  editorTabActive?: boolean;
 }
 
 const BASIC_SETUP = {
@@ -23,8 +25,47 @@ const BASIC_SETUP = {
   tabSize: 2,
 };
 
-export const CodeEditor = ({ value, tab, onChange }: CodeEditorProps) => {
+export const CodeEditor = ({
+  value,
+  tab,
+  onChange,
+  editorTabActive = true,
+}: CodeEditorProps) => {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const savedSelectionRef = useRef<{ anchor: number; head: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const view = editorRef.current?.view;
+    if (!editorTabActive) {
+      if (view) {
+        const main = view.state.selection.main;
+        savedSelectionRef.current = { anchor: main.anchor, head: main.head };
+      }
+      return;
+    }
+
+    const id = requestAnimationFrame(() => {
+      const v = editorRef.current?.view;
+      if (!v) return;
+
+      const saved = savedSelectionRef.current;
+      if (saved) {
+        const len = v.state.doc.length;
+        const anchor = Math.min(Math.max(0, saved.anchor), len);
+        const head = Math.min(Math.max(0, saved.head), len);
+        v.dispatch({
+          selection: EditorSelection.single(anchor, head),
+          scrollIntoView: true,
+        });
+      }
+
+      v.requestMeasure();
+      v.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editorTabActive]);
 
   const extensions = useMemo(
     () =>

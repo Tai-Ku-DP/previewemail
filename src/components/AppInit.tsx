@@ -158,6 +158,7 @@ export function AppInit() {
       }
 
       .previewmail-team {
+        margin-top:0 !important;
         margin-bottom: 0 !important;
         font-weight: 600;
       }
@@ -310,7 +311,7 @@ export function AppInit() {
             name: "Alex",
             actionUrl: "https://example.com",
             website: "website_Value",
-            logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/45c23903-419e-4ec1-8596-76aed748d18a.webp",
+            logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/39636762-f8c4-43cc-a5b5-3f46ea745672.webp",
             currentYear: "2025",
             callback: "callback_Value",
             digitCode: "113119",

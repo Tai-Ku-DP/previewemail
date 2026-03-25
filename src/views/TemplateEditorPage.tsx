@@ -539,20 +539,33 @@ export default function TemplateEditorPage() {
               </div>
             </div>
 
-            <div id="tour-editor-code" className="min-h-0 flex-1 flex flex-col">
-              {templateEditorMainTab === "edit" ? (
+            <div id="tour-editor-code" className="relative min-h-0 flex-1 flex flex-col">
+              <div
+                className={clsx(
+                  "absolute inset-0 flex min-h-0 flex-col",
+                  templateEditorMainTab !== "edit" &&
+                    "invisible pointer-events-none",
+                )}
+                aria-hidden={templateEditorMainTab !== "edit"}
+              >
                 <EditorPanel
                   htmlBody={htmlBody}
+                  editorTabActive={templateEditorMainTab === "edit"}
                   onHtmlChange={(v: string) => {
                     setHtmlBody(v);
                     setDirty(true);
                   }}
                 />
-              ) : (
-                <div
-                  className="flex min-h-0 flex-1 min-w-0 bg-bg-subtle"
-                  ref={previewSplitRef}
-                >
+              </div>
+              <div
+                className={clsx(
+                  "absolute inset-0 flex min-h-0 min-w-0 flex-1 bg-bg-subtle",
+                  templateEditorMainTab !== "preview" &&
+                    "invisible pointer-events-none",
+                )}
+                aria-hidden={templateEditorMainTab !== "preview"}
+                ref={previewSplitRef}
+              >
                   <div
                     className="flex min-w-0 flex-col"
                     style={{
@@ -636,7 +649,6 @@ export default function TemplateEditorPage() {
                     </>
                   )}
                 </div>
-              )}
             </div>
           </div>
         ) : (
