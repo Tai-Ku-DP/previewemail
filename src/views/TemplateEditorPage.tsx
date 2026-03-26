@@ -83,6 +83,7 @@ export default function TemplateEditorPage() {
   const activeLayout: Layout | undefined = useMemo(() => {
     if (templateLayoutId) return getLayoutById(templateLayoutId);
     return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateLayoutId, getLayoutById, layouts]);
 
   const { renderedHtml, compiledSubject } = usePreview(
@@ -539,7 +540,10 @@ export default function TemplateEditorPage() {
               </div>
             </div>
 
-            <div id="tour-editor-code" className="relative min-h-0 flex-1 flex flex-col">
+            <div
+              id="tour-editor-code"
+              className="relative min-h-0 flex-1 flex flex-col"
+            >
               <div
                 className={clsx(
                   "absolute inset-0 flex min-h-0 flex-col",
@@ -566,89 +570,89 @@ export default function TemplateEditorPage() {
                 aria-hidden={templateEditorMainTab !== "preview"}
                 ref={previewSplitRef}
               >
-                  <div
-                    className="flex min-w-0 flex-col"
-                    style={{
-                      flexBasis: previewMockDataOpen
-                        ? `${previewSplit * 100}%`
-                        : "100%",
-                    }}
-                  >
-                    <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
-                      {compiledSubject && (
-                        <div className="shrink-0 border-b border-border sbg-bg px-3 py-2">
-                          <span className="text-[13px] font-medium text-fg-muted">
-                            Subject:
-                            <span className="mt-0.5 text-[13px] text-fg ml-2">
-                              {compiledSubject}
-                            </span>
+                <div
+                  className="flex min-w-0 flex-col"
+                  style={{
+                    flexBasis: previewMockDataOpen
+                      ? `${previewSplit * 100}%`
+                      : "100%",
+                  }}
+                >
+                  <div className="flex min-h-0 flex-1 flex-col bg-bg-subtle">
+                    {compiledSubject && (
+                      <div className="shrink-0 border-b border-border sbg-bg px-3 py-2">
+                        <span className="text-[13px] font-medium text-fg-muted">
+                          Subject:
+                          <span className="mt-0.5 text-[13px] text-fg ml-2">
+                            {compiledSubject}
                           </span>
-                        </div>
-                      )}
+                        </span>
+                      </div>
+                    )}
 
-                      <iframe
-                        srcDoc={previewSrcDoc}
-                        sandbox="allow-same-origin"
-                        title="Email Preview"
-                        className="h-full min-h-0 flex-1 w-full border-0 bg-white"
+                    <iframe
+                      srcDoc={previewSrcDoc}
+                      sandbox="allow-same-origin"
+                      title="Email Preview"
+                      className="h-full min-h-0 flex-1 w-full border-0 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {previewMockDataOpen && (
+                  <>
+                    <div
+                      className="flex w-[6px] cursor-col-resize items-stretch justify-center bg-transparent hover:bg-bg-subtle"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        const container = previewSplitRef.current;
+                        if (!container) return;
+                        const rect = container.getBoundingClientRect();
+                        const startX = e.clientX;
+                        const startSplit = previewSplit;
+
+                        const onMove = (moveEvent: PointerEvent) => {
+                          const delta = moveEvent.clientX - startX;
+                          const ratio = startSplit + delta / rect.width;
+                          setPreviewSplit(ratio);
+                        };
+
+                        const onUp = (upEvent: PointerEvent) => {
+                          const target = upEvent.target as HTMLElement;
+                          if (
+                            target &&
+                            target.hasPointerCapture &&
+                            target.hasPointerCapture(upEvent.pointerId)
+                          ) {
+                            target.releasePointerCapture(upEvent.pointerId);
+                          }
+                          window.removeEventListener("pointermove", onMove);
+                          window.removeEventListener("pointerup", onUp);
+                        };
+
+                        window.addEventListener("pointermove", onMove);
+                        window.addEventListener("pointerup", onUp);
+                      }}
+                      aria-label="Resize preview and mock data panels"
+                    >
+                      <div className="my-4 h-full w-[2px] rounded-full bg-border" />
+                    </div>
+
+                    <div
+                      className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
+                      style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
+                    >
+                      <MockDataEditor
+                        value={mockDataJson}
+                        htmlBody={htmlBody}
+                        onChange={handleMockDataChange}
+                        error={parseError}
                       />
                     </div>
-                  </div>
-
-                  {previewMockDataOpen && (
-                    <>
-                      <div
-                        className="flex w-[6px] cursor-col-resize items-stretch justify-center bg-transparent hover:bg-bg-subtle"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          e.currentTarget.setPointerCapture(e.pointerId);
-                          const container = previewSplitRef.current;
-                          if (!container) return;
-                          const rect = container.getBoundingClientRect();
-                          const startX = e.clientX;
-                          const startSplit = previewSplit;
-
-                          const onMove = (moveEvent: PointerEvent) => {
-                            const delta = moveEvent.clientX - startX;
-                            const ratio = startSplit + delta / rect.width;
-                            setPreviewSplit(ratio);
-                          };
-
-                          const onUp = (upEvent: PointerEvent) => {
-                            const target = upEvent.target as HTMLElement;
-                            if (
-                              target &&
-                              target.hasPointerCapture &&
-                              target.hasPointerCapture(upEvent.pointerId)
-                            ) {
-                              target.releasePointerCapture(upEvent.pointerId);
-                            }
-                            window.removeEventListener("pointermove", onMove);
-                            window.removeEventListener("pointerup", onUp);
-                          };
-
-                          window.addEventListener("pointermove", onMove);
-                          window.addEventListener("pointerup", onUp);
-                        }}
-                        aria-label="Resize preview and mock data panels"
-                      >
-                        <div className="my-4 h-full w-[2px] rounded-full bg-border" />
-                      </div>
-
-                      <div
-                        className="min-w-0 flex flex-col h-full border-l border-border bg-bg"
-                        style={{ flexBasis: `${(1 - previewSplit) * 100}%` }}
-                      >
-                        <MockDataEditor
-                          value={mockDataJson}
-                          htmlBody={htmlBody}
-                          onChange={handleMockDataChange}
-                          error={parseError}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         ) : (

@@ -29,6 +29,12 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
           body {
             background-color: #ffffff;
           }
+
+         .gmail-blend-screen {
+          background: #000;
+          mix-blend-mode: screen;
+         }
+
     
           .previewmail-mail {
             line-height: 1.5;
@@ -38,15 +44,61 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
           }
     
           /* Button */
-          a.link {
-            text-decoration: none;
-            color: #f37f26;
+
+         a.text-decoration {
+          text-decoration:underline;
+          color: #f37f26;
+         }
+
+        a,
+        a.link {
+          text-decoration: none;
+          color: #f37f26;
+        }
+
+          a.btn {
+          display: block;
+          height: 40px;
+          padding: 0px 16px;
+          border-radius: 8px;
+
+        background: #f37f26;
+        background-image: linear-gradient(#f37f26, #f37f26);
+        color: #fff !important;
+
+        text-decoration: none;
+        text-align: center;
+        font-weight: 600;
+        line-height: 40px;
           }
+
+        a.btn-small {
+        text-decoration: none;
+        color: #F37F26!important;
+        display: block;
+        height: 24px;
+        padding: 0 16px;
+        border-radius: 4px;
+        background: #FFFFFF;
+        text-align: center;
+        font-size: 14px;
+        line-height: 24px;
+        border: 1px solid #F37F26;
+      }
     
-          a.text-decoration {
-            text-decoration: underline;
-            color: #f37f26;
-          }
+       a.btn-small.btn-outline {
+        display: block;
+        border: 1px solid #f37f26;
+        background: #fff;
+        color: #f37f26;
+      }
+      
+      a.btn.btn-outline {
+        display: block;
+        border: 1px solid #f37f26;
+        background: #fff;
+        color: #f37f26;
+      }
     
           /* Typography */
           strong {
@@ -241,7 +293,7 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
                   <tr>
                     <td class="body">
                       {{{@content}}}
-                      <p class="previewmail-regards">Thân mến,</p>
+                      <p class="previewmail-regards">Regards,</p>
                       <p class="previewmail-team">PreviewMail Team.</p>
                     </td>
                   </tr>
@@ -269,8 +321,65 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
 
 export const DEFAULT_TEMPLATES: TemplateConfig[] = [
   {
+    key: "welcome-email",
+    name: "Welcome Email",
+    layoutKey: "base-layout",
+    subject: "Welcome to our platform",
+    htmlBody: `
+            <strong>Hi {{fullName}}, 👋</strong>
+          
+            <div style="margin-top: 16px; margin-bottom: 16px">
+              <p class="workspace-domain">
+                 <a href="https://{{tenantKey}}.{{baseDomain}}" target="_blank" class="link">
+                    <strong>{{tenantKey}}</strong>.{{baseDomain}}
+                 </a>
+              </p>
+            </div>
+            
+            <p>Hey! You joined your team and ours, let grow your business now! With Simplamo you can:</p>
+            <ul>
+              <li style="line-height: 22px">Write & preview instantly — see your email render in real-time as you type, no deploy needed</li>
+              <li style="line-height: 22px">Mock your variables — paste JSON, see variables replaced with real data immediately</li>
+              <li style="line-height: 22px">Manage all templates in one place — no account, no server, everything saved locally in your browser</li>
+            </ul>
+            <p>
+              All this to help to integrate your data, opportunities, issues, processes, and people to achieve your short and long term goals while accelerating your vision.
+            </p>
+            
+            <p>
+              Now go back to PreviewMail and build better emails faster."
+            </p>
+
+            <div style="display: flex; justify-content: center;margin-bottom: 16px;">
+             <a href="{{callback}}" class="btn">
+                <span class="gmail-blend-screen">
+                   <span class="gmail-blend-difference"> Activate Now </span>
+                </span>
+             </a>
+            </div>
+
+            <div style="margin-top: 16px; margin-bottom: 16px;">
+               <div style="margin-top: 4px; margin-bottom: 4px;">Or copy and paste this link into your browser:</div>
+               <a href="https://{{tenantKey}}.{{baseDomain}}" style="word-break: break-all;">https://{{tenantKey}}.{{baseDomain}}</a>
+            </div>
+          
+            <div style="margin-top: 16px; margin-bottom: 16px;">
+            <div style="margin-top: 4px; margin-bottom: 4px;">If you did not create a PreviewMail account, please kindly contact us at</div>
+               <a style="word-break: break-all;">support@previewmail.com</a>
+            </div>
+    `,
+    mockData: {
+      companyName: "TTech",
+      fullName: "John Doe",
+      tenantKey: "ttech",
+      baseDomain: "previewmail.com",
+      callback: "https://ttech.previewmail.com",
+      logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/39636762-f8c4-43cc-a5b5-3f46ea745672.webp",
+    },
+  },
+  {
     key: "login-with-email",
-    name: "Login With Email",
+    name: "Login Email",
     layoutKey: "base-layout", // ← reference theo key, không phải id
     subject: "Your login code: {{digitCode}}",
     htmlBody: `<div style="margin-top: 16px; margin-bottom: 16px">
@@ -295,7 +404,7 @@ export const DEFAULT_TEMPLATES: TemplateConfig[] = [
         data-cfemail="26555356564954526652544745524f49485149544d0845494b"
         >support@previewmail.com</span
       ></a
-    >q
+    >
   </div>
   `,
     mockData: {
