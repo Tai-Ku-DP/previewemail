@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import { HelpCircle } from "lucide-react";
 
 export function AppTour() {
   const [isReady, setIsReady] = useState(false);
@@ -34,7 +33,7 @@ export function AppTour() {
           popover: {
             title: "Templates",
             description:
-              "Templates are the actual content and structure of a specific email, like a 'Welcome Email' or 'Password Reset' flow.",
+              "Templates are the actual content and structure of a specific email, like a 'Welcome Email', 'Password Reset', 'Login Email', 'Overdue Task Reminder', etc.",
             side: "bottom",
             align: "start",
           },
@@ -83,15 +82,17 @@ export function AppTour() {
     }
   }, [isReady]);
 
-  return (
-    <button
-      onClick={runTour}
-      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg mx-1"
-      aria-label="App Tour"
-      title="Start Tour"
-    >
-      <HelpCircle className="h-4 w-4" />
-      <span className="hidden sm:inline">Tour</span>
-    </button>
-  );
+  return null;
+
+  // return (
+  //   <button
+  //     onClick={runTour}
+  //     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-2.5 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg mx-1"
+  //     aria-label="App Tour"
+  //     title="Start Tour"
+  //   >
+  //     <HelpCircle className="h-4 w-4" />
+  //     <span className="hidden sm:inline">Tour</span>
+  //   </button>
+  // );
 }
