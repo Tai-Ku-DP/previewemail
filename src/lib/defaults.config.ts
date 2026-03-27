@@ -62,6 +62,22 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
           padding: 0px 16px;
           border-radius: 8px;
 
+          background: #f37f26;
+          background-image: linear-gradient(#f37f26, #f37f26);
+          color: #fff !important;
+
+          text-decoration: none;
+          text-align: center;
+          font-weight: 600;
+          line-height: 40px;
+          }
+
+          a.btn-inline {
+        display: inline-block;
+        height: 40px;
+        padding: 0px 16px;
+        border-radius: 8px;
+
         background: #f37f26;
         background-image: linear-gradient(#f37f26, #f37f26);
         color: #fff !important;
@@ -70,7 +86,7 @@ export const DEFAULT_LAYOUTS: LayoutConfig[] = [
         text-align: center;
         font-weight: 600;
         line-height: 40px;
-          }
+      }
 
         a.btn-small {
         text-decoration: none;
@@ -336,18 +352,15 @@ export const DEFAULT_TEMPLATES: TemplateConfig[] = [
               </p>
             </div>
             
-            <p>Hey! You joined your team and ours, let grow your business now! With Simplamo you can:</p>
+            <p>Hey! You joined your team and ours, let grow your business now! With PreviewMail you can:</p>
             <ul>
               <li style="line-height: 22px">Write & preview instantly — see your email render in real-time as you type, no deploy needed</li>
               <li style="line-height: 22px">Mock your variables — paste JSON, see variables replaced with real data immediately</li>
               <li style="line-height: 22px">Manage all templates in one place — no account, no server, everything saved locally in your browser</li>
             </ul>
-            <p>
-              All this to help to integrate your data, opportunities, issues, processes, and people to achieve your short and long term goals while accelerating your vision.
-            </p>
             
             <p>
-              Now go back to PreviewMail and build better emails faster."
+              Now go back to PreviewMail and build better emails faster.
             </p>
 
             <div style="display: flex; justify-content: center;margin-bottom: 16px;">
@@ -383,40 +396,171 @@ export const DEFAULT_TEMPLATES: TemplateConfig[] = [
     layoutKey: "base-layout", // ← reference theo key, không phải id
     subject: "Your login code: {{digitCode}}",
     htmlBody: `<div style="margin-top: 16px; margin-bottom: 16px">
-    <a
-      class="text-decoration"
-      href="{{callback}}"
-      style="word-break: break-all; margin-top: 8px; margin-bottom: 8px"
-      >Click here to log in to the system</a
-    >
-    <div style="margin-top: 8px; margin-bottom: 8px; color: #000">
-      Or copy and paste this login code below:
+      <a
+        class="text-decoration"
+        href="{{callback}}"
+        style="word-break: break-all; margin-top: 8px; margin-bottom: 8px"
+        >Click here to log in to the system</a
+      >
+      <div style="margin-top: 8px; margin-bottom: 8px; color: #000">
+        Or copy and paste this login code below:
+      </div>
     </div>
-  </div>
-  <p class="workspace-domain">{{digitCode}}</p>
-  <div style="margin-top: 16px; margin-bottom: 16px">
-    <div style="margin-top: 8px; margin-bottom: 8px; color: #000">
-      If you did not create PreviewMail account, please kindly contact us at
+    <p class="workspace-domain">{{digitCode}}</p>
+    <div style="margin-top: 16px; margin-bottom: 16px">
+      <div style="margin-top: 8px; margin-bottom: 8px; color: #000">
+        If you did not create PreviewMail account, please kindly contact us at
+      </div>
+      <a href="mailto:support@previewmail.com" class="link"
+        ><span
+          class="__cf_email__"
+          data-cfemail="26555356564954526652544745524f49485149544d0845494b"
+          >support@previewmail.com</span
+        ></a
+      >
     </div>
-    <a href="mailto:support@previewmail.com" class="link"
-      ><span
-        class="__cf_email__"
-        data-cfemail="26555356564954526652544745524f49485149544d0845494b"
-        >support@previewmail.com</span
-      ></a
-    >
-  </div>
-  `,
+    `,
     mockData: {
-      mockData: {
-        name: "Alex",
-        actionUrl: "https://example.com",
-        website: "website_Value",
-        logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/39636762-f8c4-43cc-a5b5-3f46ea745672.webp",
-        currentYear: "2025",
-        callback: "callback_Value",
-        digitCode: "113119",
+      name: "Alex",
+      actionUrl: "https://example.com",
+      website: "website_Value",
+      logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/39636762-f8c4-43cc-a5b5-3f46ea745672.webp",
+      currentYear: "2025",
+      callback: "callback_Value",
+      digitCode: "113119",
+    },
+  },
+  {
+    key: "overdue-task-reminder",
+    name: "Overdue Task Reminder",
+    layoutKey: "base-layout",
+    subject: `[{{companyName}}] Your Tasks are overdue`,
+    htmlBody: `
+ <div class="recap-block">
+  <p class="hello">Hi {{fullName}}, 👋</p>
+
+  <div style="margin-top: 8px; margin-bottom: 16px">
+    <p>
+      You have
+      <strong>{{duedate.numberWork}} tasks</strong>
+      being overdue.
+    </p>
+  </div>
+
+  <!-- To-dos -->
+  <div style="margin-bottom: 8px">
+    <p style="font-size: 16px; font-weight: 600">To-dos ({{duedate.labelDuedate.todos}})</p>
+  </div>
+
+  {{#each groupTodoDuedate}}
+  <div>
+    <table class="full-width recap-table">
+      {{#each todos}}
+      <tr>
+        <td
+          style="
+            padding-right: 16px;
+            max-width: 300px;
+            vertical-align: middle;
+            width: 60%;
+          "
+        >
+          <a href="{{link}}" target="_blank" style="color: #000 !important">{{position}}. {{title}}</a>
+        </td>
+        <td
+          style="
+            border: 0;
+            text-align: center;
+            vertical-align: middle;
+            width: 30%;
+          "
+        >
+          {{teamName}}
+        </td>
+        <td align="right" style="vertical-align: middle; width: 10%">{{duedate}}</td>
+      </tr>
+      {{/each}}
+    </table>
+  </div>
+  {{/each}} {{^groupTodoDuedate}}
+  <span style="font-style: italic; color: #a1a1a1">There is no task overdue.</span>
+  {{/groupTodoDuedate}}
+</div>
+
+<!-- Call to Action -->
+<div style="text-align: center; margin-bottom: 16px">
+  <a href="{{callback}}" class="btn-inline">
+    <span class="gmail-blend-screen">
+      <span class="gmail-blend-difference">View Your Dashboard</span>
+    </span>
+  </a>
+</div>
+
+<div style="margin-top: 16px; margin-bottom: 16px">
+  <div style="color: #000">Or copy and paste this link into your browser:</div>
+  <a href="{{callback}}" style="word-break: break-all">{{callback}}</a>
+</div>
+
+<p>
+  <span style="font-style: italic; color: #a1a1a1">
+    Note: Don't want to receive emails like these? Change your Notification Settings
+    <a class="text-decoration" href="{{callbackNotification}}">here.</a>
+  </span>
+</p>
+
+      `,
+    mockData: {
+      companyName: "TTech",
+      fullName: "Tony Tai",
+      duedate: {
+        numberWork: "6",
+        dayDueDate: "3",
+        labelDuedate: {
+          todos: "3",
+          mileStones: "3",
+          conversation: "2",
+        },
       },
+      groupTodoDuedate: [
+        {
+          todos: [
+            {
+              link: "https://example.com/rock1",
+              position: "1",
+              title: "TTech: Review code for the new feature",
+              duedate: "29/07/2022",
+              teamName: "Development Team",
+            },
+          ],
+        },
+        {
+          todos: [
+            {
+              link: "https://example.com/rock1",
+              position: "2",
+              title: "TTech: Optimize loading time for the new feature",
+              duedate: "29/07/2022",
+              teamName: "Development Team",
+            },
+          ],
+        },
+        {
+          todos: [
+            {
+              link: "https://example.com/rock1",
+              position: "3",
+              title: "TTech: Update the documentation for the new feature",
+              duedate: "29/07/2022",
+              teamName: "Development Team",
+            },
+          ],
+        },
+      ],
+      callback: "https://ttech.previewmail.com",
+      callbackNotification: "https://ttech.previewmail.com/notification",
+      website: "https://ttech.previewmail.com",
+      logo: "https://simplamo.s3.ap-southeast-1.amazonaws.com/core/39636762-f8c4-43cc-a5b5-3f46ea745672.webp",
+      currentYear: "2026",
     },
   },
 ];
