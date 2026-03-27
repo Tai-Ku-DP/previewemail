@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams, useBlocker } from "react-router-dom";
 import { Toaster, toast } from "sonner";
@@ -64,7 +63,7 @@ export default function TemplateEditorPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
+  const [previewDevice] = useState<"desktop" | "mobile">(
     "desktop",
   );
 
