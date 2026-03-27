@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams, useBlocker } from "react-router-dom";
 import { Toaster, toast } from "sonner";
@@ -7,8 +8,8 @@ import {
   Paintbrush,
   Maximize,
   Minimize,
-  Smartphone,
-  Monitor,
+  // Smartphone,
+  // Monitor,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -477,7 +478,7 @@ export default function TemplateEditorPage() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  {templateEditorMainTab === "preview" && (
+                  {/* {templateEditorMainTab === "preview" && (
                     <div className="flex items-center rounded-md border border-border bg-bg-subtle p-0.5 text-[12px]">
                       <button
                         onClick={() => setPreviewDevice("desktop")}
@@ -506,7 +507,7 @@ export default function TemplateEditorPage() {
                         Mobile
                       </button>
                     </div>
-                  )}
+                  )} */}
 
                   {templateEditorMainTab === "preview" && (
                     <button
