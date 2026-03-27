@@ -2,7 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams, useBlocker } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
-import { Settings, Paintbrush, Maximize, Minimize } from "lucide-react";
+import {
+  Settings,
+  Paintbrush,
+  Maximize,
+  Minimize,
+  Smartphone,
+  Monitor,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
@@ -56,6 +63,9 @@ export default function TemplateEditorPage() {
   const [templateName, setTemplateName] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">(
+    "desktop",
+  );
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -468,6 +478,37 @@ export default function TemplateEditorPage() {
 
                 <div className="flex items-center gap-1.5">
                   {templateEditorMainTab === "preview" && (
+                    <div className="flex items-center rounded-md border border-border bg-bg-subtle p-0.5 text-[12px]">
+                      <button
+                        onClick={() => setPreviewDevice("desktop")}
+                        className={clsx(
+                          "flex items-center gap-1.5 rounded px-2.5 py-1 font-medium transition-colors",
+                          previewDevice === "desktop"
+                            ? "bg-bg text-fg shadow-sm"
+                            : "text-fg-muted hover:text-fg-secondary",
+                        )}
+                        aria-label="Desktop preview"
+                      >
+                        <Monitor className="h-3.5 w-3.5" />
+                        Desktop
+                      </button>
+                      <button
+                        onClick={() => setPreviewDevice("mobile")}
+                        className={clsx(
+                          "flex items-center gap-1.5 rounded px-2.5 py-1 font-medium transition-colors",
+                          previewDevice === "mobile"
+                            ? "bg-bg text-fg shadow-sm"
+                            : "text-fg-muted hover:text-fg-secondary",
+                        )}
+                        aria-label="Mobile preview"
+                      >
+                        <Smartphone className="h-3.5 w-3.5" />
+                        Mobile
+                      </button>
+                    </div>
+                  )}
+
+                  {templateEditorMainTab === "preview" && (
                     <button
                       onClick={togglePreviewMockData}
                       className="inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
@@ -482,6 +523,7 @@ export default function TemplateEditorPage() {
                         : "Show mock data"}
                     </button>
                   )}
+
                   {templateEditorMainTab === "edit" && (
                     <button
                       onClick={() => {
@@ -590,12 +632,109 @@ export default function TemplateEditorPage() {
                       </div>
                     )}
 
-                    <iframe
-                      srcDoc={previewSrcDoc}
-                      sandbox="allow-same-origin"
-                      title="Email Preview"
-                      className="h-full min-h-0 flex-1 w-full border-0 bg-white"
-                    />
+                    {/* Thay thế đoạn <iframe ... /> hiện tại */}
+                    {previewDevice === "desktop" ? (
+                      // Desktop: full width, không có gì bao ngoài
+                      <iframe
+                        srcDoc={previewSrcDoc}
+                        sandbox="allow-same-origin"
+                        title="Email Preview"
+                        className="h-full min-h-0 flex-1 w-full border-0 bg-white"
+                      />
+                    ) : (
+                      <div className="flex flex-1 min-h-0 items-start justify-center bg-bg-subtle overflow-auto">
+                        <div className="my-6" style={{ width: 390 }}>
+                          <div
+                            className="relative rounded-[2.5rem] border-[6px] border-fg/20 shadow-2xl bg-white overflow-hidden flex flex-col"
+                            // style={{ height: 700 }}
+                          >
+                            {/* Status bar */}
+                            <div className="shrink-0 flex items-center justify-between px-5 pt-3 pb-1 bg-white">
+                              <span className="text-[13px] font-semibold">
+                                9:41
+                              </span>
+                              <div className="flex items-center gap-1 text-[11px]">
+                                <span>▲▲▲</span>
+                                <span>5G</span>
+                                <span>🔋</span>
+                              </div>
+                            </div>
+
+                            {/* Gmail toolbar — chỉ có border-b này thôi */}
+                            <div className="shrink-0 flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
+                              <span className="text-gray-600 text-lg">←</span>
+                              <div className="flex items-center gap-4 text-gray-500">
+                                <span className="text-base">⤓</span>
+                                <span className="text-base">🗑</span>
+                                <span className="text-base">✉</span>
+                                <span className="text-base">⋯</span>
+                              </div>
+                            </div>
+
+                            {/* Scrollable area — subject + sender + email content cuộn cùng nhau */}
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                              {/* Subject */}
+                              <div className="px-4 pt-3 pb-2">
+                                <div className="text-[15px] font-bold text-gray-900 leading-snug">
+                                  {compiledSubject || "No subject"}
+                                </div>
+                              </div>
+
+                              {/* Sender row — không có border */}
+                              <div className="flex items-center justify-between px-4 py-2">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+                                    P
+                                  </div>
+                                  <div>
+                                    <div className="text-[13px] font-semibold text-gray-900">
+                                      PreviewMail
+                                    </div>
+                                    <div className="text-[11px] text-gray-500">
+                                      to me
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-400 text-base">
+                                  <span>🙂</span>
+                                  <span>↩</span>
+                                  <span>⋯</span>
+                                </div>
+                              </div>
+
+                              {/* Email content — không cần height fixed, tự giãn theo nội dung */}
+                              <div className="px-1">
+                                <iframe
+                                  srcDoc={previewSrcDoc}
+                                  sandbox="allow-same-origin"
+                                  title="Mobile Email Preview"
+                                  className="w-full border-0 bg-white"
+                                  style={{ height: 600, display: "block" }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Bottom action bar — fixed ở dưới, chỉ có border-t */}
+                            <div className="shrink-0 flex items-center justify-around px-4 py-3 border-t border-gray-200 bg-white">
+                              <button className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-gray-200 text-[12px] text-gray-700">
+                                ↩ Trả lời
+                              </button>
+                              <button className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-gray-200 text-[12px] text-gray-700">
+                                → Chuyển tiếp
+                              </button>
+                              <button className="p-2 rounded-full border border-gray-200 text-[12px] text-gray-500">
+                                🙂
+                              </button>
+                            </div>
+
+                            {/* Home indicator */}
+                            <div className="shrink-0 flex justify-center py-1.5 bg-white">
+                              <div className="h-1 w-20 rounded-full bg-gray-300" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
