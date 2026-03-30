@@ -1,0 +1,26 @@
+{
+  "name": "@previewmail/adapter-mongodb",
+  "version": "2.0.0",
+  "description": "MongoDB adapter for PreviewMail headless CMS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "mongoose": "^8.2.1"
+  },
+  "peerDependencies": {
+    "@previewmail/nestjs": "*"
+  },
+  "devDependencies": {
+    "@previewmail/nestjs": "*",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.24",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^9.1.7",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  }
+}
