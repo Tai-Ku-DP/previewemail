@@ -25,6 +25,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Settings } from "lucide-react";
+import { SettingsModal } from "@/components/SettingsModal";
+import { useSettings } from "@/hooks/useSettings";
+import { useV2Config } from "@/hooks/useV2Config";
 
 function wrapIframeSrcDoc(html: string): string {
   const safe = html ?? "";
@@ -99,6 +103,7 @@ export default function TemplatesPage() {
   } = useTemplates();
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab =
     (searchParams.get("tab") as "templates" | "layouts") || "templates";
@@ -120,7 +125,10 @@ export default function TemplatesPage() {
   } = useLayouts();
 
   const loadTemplates = useTemplateStore((s) => s.loadTemplates);
+  const syncStatus = useTemplateStore((s) => s.syncStatus);
   const loadLayouts = useLayoutStore((s) => s.loadLayouts);
+  const { settings, save: saveSettings, clear: clearSettings } = useSettings();
+  const { config: v2Config, save: saveV2Config, clear: clearV2Config } = useV2Config();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -425,6 +433,17 @@ export default function TemplatesPage() {
         }}
       />
 
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onSave={saveSettings}
+        onClear={clearSettings}
+        v2Config={v2Config}
+        onSaveV2Config={saveV2Config}
+        onClearV2Config={clearV2Config}
+      />
+
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
         <div className="flex items-center gap-2">
           <Logo />
@@ -434,7 +453,47 @@ export default function TemplatesPage() {
           <div className="hidden sm:block">
             <StorageIndicator />
           </div>
+
+          {/* Sync Status Badge */}
+          <div
+            className="hidden sm:flex items-center mx-1 px-2.5 py-1.5 rounded-md bg-bg-subtle border border-border text-[11px] font-medium leading-none cursor-default"
+            title={
+              syncStatus === "synced"
+                ? "Synced to Database (API Mode)"
+                : syncStatus === "sync_failed"
+                  ? "Fail to Sync (Local Cache Only)"
+                  : "Local Storage Mode"
+            }
+          >
+            {syncStatus === "synced" && (
+              <span className="mr-1.5 flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            )}
+            {syncStatus === "local_only" && (
+              <span className="mr-1.5 flex h-2 w-2 rounded-full bg-yellow-500" />
+            )}
+            {syncStatus === "sync_failed" && (
+              <span className="mr-1.5 flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+            )}
+            <span className="text-fg-secondary">
+              {syncStatus === "synced"
+                ? "Synced"
+                : syncStatus === "sync_failed"
+                  ? "Sync Failed"
+                  : "Local"}
+            </span>
+          </div>
+
           <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+          
           <button
             onClick={handleExport}
             className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-bg px-3 text-[13px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"

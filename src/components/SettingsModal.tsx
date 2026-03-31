@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { X, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { clsx } from "clsx";
-import type { SESSettings } from "@/types";
+import type { SESSettings, V2Config } from "@/types";
 
 interface SettingsModalProps {
   open: boolean;
@@ -11,6 +11,9 @@ interface SettingsModalProps {
   settings: SESSettings | null;
   onSave: (settings: SESSettings) => Promise<void>;
   onClear: () => Promise<void>;
+  v2Config?: V2Config | null;
+  onSaveV2Config?: (config: V2Config) => Promise<void>;
+  onClearV2Config?: () => Promise<void>;
 }
 
 const EMPTY: SESSettings = {
@@ -40,13 +43,23 @@ export const SettingsModal = ({
   settings,
   onSave,
   onClear,
+  v2Config,
+  onSaveV2Config,
+  onClearV2Config,
 }: SettingsModalProps) => {
   const [form, setForm] = useState<SESSettings>(settings ?? EMPTY);
+  const [v2Form, setV2Form] = useState<V2Config>(
+    v2Config ?? { baseUrl: "", apiKey: "" },
+  );
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<"api" | "ses">("api");
 
   useEffect(() => {
-    if (open) setForm(settings ?? EMPTY);
-  }, [open, settings]);
+    if (open) {
+      setForm(settings ?? EMPTY);
+      setV2Form(v2Config ?? { baseUrl: "", apiKey: "" });
+    }
+  }, [open, settings, v2Config]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,44 +71,66 @@ export const SettingsModal = ({
   }, [open, onClose]);
 
   const handleSubmit = useCallback(
-    async (e: FormEvent) => {
+    (e: FormEvent) => {
       e.preventDefault();
-      if (
-        !form.accessKeyId ||
-        !form.secretAccessKey ||
-        !form.region ||
-        !form.fromAddress
-      ) {
-        toast.error("All fields are required");
-        return;
-      }
-      setSaving(true);
-      try {
-        await onSave(form);
-        toast.success("AWS SES credentials saved");
-        onClose();
-      } catch {
-        toast.error("Failed to save credentials");
-      } finally {
-        setSaving(false);
-      }
+      void (async () => {
+        setSaving(true);
+        try {
+          if (tab === "ses") {
+            if (
+              !form.accessKeyId ||
+              !form.secretAccessKey ||
+              !form.region ||
+              !form.fromAddress
+            ) {
+              toast.error("All AWS fields are required");
+              setSaving(false);
+              return;
+            }
+            await onSave(form);
+            toast.success("AWS SES credentials saved");
+          } else {
+            if (!v2Form.baseUrl || !v2Form.apiKey) {
+              toast.error("All API Sync fields are required");
+              setSaving(false);
+              return;
+            }
+            if (onSaveV2Config) await onSaveV2Config(v2Form);
+            toast.success("PreviewMail API settings saved. Syncing...");
+          }
+          onClose();
+        } catch {
+          toast.error("Failed to save settings");
+        } finally {
+          setSaving(false);
+        }
+      })();
     },
-    [form, onSave, onClose],
+    [form, v2Form, tab, onSave, onSaveV2Config, onClose],
   );
 
   const handleClear = useCallback(async () => {
     try {
-      await onClear();
-      setForm(EMPTY);
-      toast.success("Credentials cleared");
+      if (tab === "ses") {
+        await onClear();
+        setForm(EMPTY);
+        toast.success("AWS Credentials cleared");
+      } else {
+        if (onClearV2Config) await onClearV2Config();
+        setV2Form({ baseUrl: "", apiKey: "" });
+        toast.success("PreviewMail API settings cleared (V1 fallback)");
+      }
       onClose();
     } catch {
-      toast.error("Failed to clear credentials");
+      toast.error("Failed to clear settings");
     }
-  }, [onClear, onClose]);
+  }, [onClear, onClearV2Config, tab, onClose]);
 
   const update = (field: keyof SESSettings, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const updateV2 = (field: keyof V2Config, value: string) =>
+    setV2Form((f) => ({ ...f, [field]: value }));
 
   if (!open) return null;
 
@@ -111,10 +146,31 @@ export const SettingsModal = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-fg">AWS SES Settings</h2>
-            <p className="mt-0.5 text-xs text-fg-muted">
-              Configure your email sending credentials
-            </p>
+            <h2 className="text-sm font-semibold text-fg">Settings</h2>
+            <div className="mt-1 flex items-center gap-3">
+              <button
+                className={clsx(
+                  "text-xs transition-colors",
+                  tab === "api"
+                    ? "text-fg font-medium"
+                    : "text-fg-muted hover:text-fg-secondary",
+                )}
+                onClick={() => setTab("api")}
+              >
+                PreviewMail API (V2)
+              </button>
+              <button
+                className={clsx(
+                  "text-xs transition-colors",
+                  tab === "ses"
+                    ? "text-fg font-medium"
+                    : "text-fg-muted hover:text-fg-secondary",
+                )}
+                onClick={() => setTab("ses")}
+              >
+                AWS SES (V1)
+              </button>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -127,63 +183,84 @@ export const SettingsModal = ({
 
         {/* Body */}
         <form
-          onSubmit={(e) => void handleSubmit(e)}
+          onSubmit={handleSubmit}
           className="space-y-4 px-6 py-5"
         >
           <div className="flex items-start gap-2.5 rounded-lg border border-accent/20 bg-accent-subtle px-3 py-2.5">
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
             <p className="text-[12px] leading-relaxed text-fg-secondary">
-              Credentials are stored locally in IndexedDB. They never leave your
-              device.
+              {tab === "ses"
+                ? "Credentials are stored locally in IndexedDB. They never leave your device."
+                : "Enter your PreviewMail headless CMS configuration. This syncs your templates to a remote Database."}
             </p>
           </div>
 
-          <Field
-            label="Access Key ID"
-            value={form.accessKeyId}
-            onChange={(v) => update("accessKeyId", v)}
-            placeholder="AKIAIOSFODNN7EXAMPLE"
-          />
-          <Field
-            label="Secret Access Key"
-            value={form.secretAccessKey}
-            onChange={(v) => update("secretAccessKey", v)}
-            placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-            type="password"
-          />
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-fg">
-              Region
-            </label>
-            <select
-              value={form.region}
-              onChange={(e) => update("region", e.target.value)}
-              className="h-9 w-full rounded-md border border-border bg-bg px-3 text-[13px] text-fg transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {REGIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Field
-            label="From Address (verified)"
-            value={form.fromAddress}
-            onChange={(v) => update("fromAddress", v)}
-            placeholder="noreply@yourdomain.com"
-            type="email"
-          />
+          {tab === "ses" ? (
+            <>
+              <Field
+                label="Access Key ID"
+                value={form.accessKeyId}
+                onChange={(v) => update("accessKeyId", v)}
+                placeholder="AKIAIOSFODNN7EXAMPLE"
+              />
+              <Field
+                label="Secret Access Key"
+                value={form.secretAccessKey}
+                onChange={(v) => update("secretAccessKey", v)}
+                placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                type="password"
+              />
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-fg">
+                  Region
+                </label>
+                <select
+                  value={form.region}
+                  onChange={(e) => update("region", e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-bg px-3 text-[13px] text-fg transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {REGIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Field
+                label="From Address (verified)"
+                value={form.fromAddress}
+                onChange={(v) => update("fromAddress", v)}
+                placeholder="noreply@yourdomain.com"
+                type="email"
+              />
+            </>
+          ) : (
+            <>
+              <Field
+                label="Base URL"
+                value={v2Form.baseUrl}
+                onChange={(v) => updateV2("baseUrl", v)}
+                placeholder="http://localhost:3001"
+              />
+              <Field
+                label="API Key"
+                value={v2Form.apiKey}
+                onChange={(v) => updateV2("apiKey", v)}
+                placeholder="Configured PreviewMail API Key"
+                type="password"
+              />
+            </>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-border pt-4">
-            {settings ? (
+            {(tab === "ses" ? settings : v2Config) ? (
               <button
                 type="button"
                 onClick={() => void handleClear()}
                 className="text-[13px] font-medium text-danger transition-colors hover:text-danger-hover"
               >
-                Clear credentials
+                Clear settings
               </button>
             ) : (
               <div />

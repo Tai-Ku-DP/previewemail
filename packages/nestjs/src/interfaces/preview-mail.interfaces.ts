@@ -6,6 +6,17 @@ export interface Template {
   htmlBody: string;
   textBody: string;
   mockData: Record<string, unknown>;
+  layoutId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Layout {
+  id: string;
+  name: string;
+  alias: string;
+  htmlBody: string;
+  textBody: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -30,6 +41,12 @@ export interface IPreviewMailAdapter {
    * Delete a template by ID.
    */
   delete(id: string): Promise<void>;
+
+  // Layouts
+  findAllLayouts(page?: number, limit?: number): Promise<Layout[]>;
+  findLayoutByAlias(alias: string): Promise<Layout | null>;
+  saveLayout(layout: Layout): Promise<Layout>;
+  deleteLayout(id: string): Promise<void>;
 }
 
 export interface PreviewMailOptions {

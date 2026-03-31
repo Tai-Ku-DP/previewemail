@@ -22,7 +22,9 @@ import { useLayouts } from "@/hooks/useLayouts";
 import { useMockData } from "@/hooks/useMockData";
 import { usePreview } from "@/hooks/usePreview";
 import { useSettings } from "@/hooks/useSettings";
+import { useV2Config } from "@/hooks/useV2Config";
 import { useEditorStore } from "@/stores/editorStore";
+import { useTemplateStore } from "@/stores/templateStore";
 import { formatHtml, formatJson } from "@/lib/formatter";
 import { buildMockDataSkeleton } from "@/lib/handlebars";
 import { StorageIndicator } from "@/components/StorageIndicator";
@@ -51,6 +53,8 @@ export default function TemplateEditorPage() {
   const isDirty = useEditorStore((s) => s.isDirty);
   const setDirty = useEditorStore((s) => s.setDirty);
   const { settings, save: saveSettings, clear: clearSettings } = useSettings();
+  const { config: v2Config, save: saveV2Config, clear: clearV2Config } = useV2Config();
+  const syncStatus = useTemplateStore((s) => s.syncStatus);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -348,6 +352,9 @@ export default function TemplateEditorPage() {
         settings={settings}
         onSave={saveSettings}
         onClear={clearSettings}
+        v2Config={v2Config}
+        onSaveV2Config={saveV2Config}
+        onClearV2Config={clearV2Config}
       />
 
       {!editorMaximized && (
@@ -420,6 +427,35 @@ export default function TemplateEditorPage() {
                 <StorageIndicator />
               </div>
 
+              {/* Sync Status Badge */}
+              <div
+                className="hidden sm:flex items-center mx-1 px-2.5 py-1.5 rounded-md bg-bg-subtle border border-border text-[11px] font-medium leading-none cursor-default"
+                title={
+                  syncStatus === "synced"
+                    ? "Synced to Database (API Mode)"
+                    : syncStatus === "sync_failed"
+                      ? "Fail to Sync (Local Cache Only)"
+                      : "Local Storage Mode"
+                }
+              >
+                {syncStatus === "synced" && (
+                  <span className="mr-1.5 flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                )}
+                {syncStatus === "local_only" && (
+                  <span className="mr-1.5 flex h-2 w-2 rounded-full bg-yellow-500" />
+                )}
+                {syncStatus === "sync_failed" && (
+                  <span className="mr-1.5 flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                )}
+                <span className="text-fg-secondary">
+                  {syncStatus === "synced"
+                    ? "Synced"
+                    : syncStatus === "sync_failed"
+                      ? "Sync Failed"
+                      : "Local"}
+                </span>
+              </div>
+
               <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
 
               <button
@@ -468,7 +504,7 @@ export default function TemplateEditorPage() {
                 </button>
               </div>
 
-              <div className="flex items-center gap-4 items-center mb-1">
+              <div className="flex items-center gap-4 mb-1">
                 <div className="text-[11px] text-fg-muted">
                   <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
                     ⌘/

@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { IPreviewMailAdapter, PreviewMailOptions, Template } from './interfaces/preview-mail.interfaces';
+import { IPreviewMailAdapter, PreviewMailOptions, Template, Layout } from './interfaces/preview-mail.interfaces';
 import { LRUCache } from 'lru-cache';
 import { randomUUID } from 'crypto';
 
@@ -49,6 +49,7 @@ export class PreviewMailService {
       htmlBody: data.htmlBody || '',
       textBody: data.textBody || '',
       mockData: data.mockData || {},
+      layoutId: data.layoutId,
       createdAt: now,
       updatedAt: now,
     };
@@ -71,6 +72,7 @@ export class PreviewMailService {
       htmlBody: data.htmlBody || existing?.htmlBody || '',
       textBody: data.textBody || existing?.textBody || '',
       mockData: data.mockData || existing?.mockData || {},
+      layoutId: data.layoutId || existing?.layoutId,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
     };
@@ -85,5 +87,53 @@ export class PreviewMailService {
     // So if using cache aggressively, clear all cache on delete, or we search first.
     if (this.cache) this.cache.clear();
     await this.adapter.delete(id);
+  }
+
+  // --- Layout Operations ---
+
+  async findAllLayouts(page: number = 1, limit: number = 50): Promise<Partial<Layout>[]> {
+    const layouts = await this.adapter.findAllLayouts(page, limit);
+    return layouts.map(({ htmlBody, textBody, ...meta }) => meta);
+  }
+
+  async findLayoutByAlias(alias: string): Promise<Layout | null> {
+    return this.adapter.findLayoutByAlias(alias);
+  }
+
+  async createLayout(data: Partial<Layout>): Promise<Layout> {
+    const now = Date.now();
+    const newLayout: Layout = {
+      id: randomUUID(),
+      name: data.name || 'Untitled Layout',
+      alias: data.alias || randomUUID(),
+      htmlBody: data.htmlBody || '',
+      textBody: data.textBody || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return this.adapter.saveLayout(newLayout);
+  }
+
+  async updateLayout(id: string, data: Partial<Layout>): Promise<Layout> {
+    const existing = await this.adapter.findLayoutByAlias(data.alias || '');
+    const now = Date.now();
+    
+    const updatedLayout: Layout = {
+      ...(existing || {}),
+      id,
+      name: data.name!,
+      alias: data.alias!,
+      htmlBody: data.htmlBody || existing?.htmlBody || '',
+      textBody: data.textBody || existing?.textBody || '',
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    };
+
+    return this.adapter.saveLayout(updatedLayout);
+  }
+
+  async deleteLayout(id: string): Promise<void> {
+    await this.adapter.deleteLayout(id);
   }
 }

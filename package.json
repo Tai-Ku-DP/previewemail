@@ -2,7 +2,8 @@
   "name": "previewmail",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "example:nestjs": "npm run start:dev -w examples/nestjs-app"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1009.0",
@@ -23,6 +25,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@tanstack/react-table": "^8.21.3",
     "@uiw/react-codemirror": "^4.25.8",
+    "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "driver.js": "^1.4.0",

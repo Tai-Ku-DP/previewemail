@@ -20,13 +20,16 @@ interface EmailEditorDB extends DBSchema {
   };
   settings: {
     key: string;
-    value: { id: string; data: SESSettings };
+    value: 
+      | { id: 'ses-credentials'; data: SESSettings }
+      | { id: 'v2-config'; data: import('@/types').V2Config };
   };
 }
 
 const DB_NAME = 'email-editor-db';
 const DB_VERSION = 3;
 const SETTINGS_KEY = 'ses-credentials';
+const V2_CONFIG_KEY = 'v2-config';
 
 let dbPromise: Promise<IDBPDatabase<EmailEditorDB>> | null = null;
 
@@ -190,7 +193,10 @@ export async function getSESSettings(): Promise<SESSettings | null> {
   try {
     const db = await getDB();
     const row = await db.get('settings', SETTINGS_KEY);
-    return row?.data ?? null;
+    if (row && row.id === SETTINGS_KEY) {
+      return row.data;
+    }
+    return null;
   } catch (err: unknown) {
     console.error('Failed to get SES settings:', err);
     return null;
@@ -213,6 +219,42 @@ export async function clearSESSettings(): Promise<void> {
     await db.delete('settings', SETTINGS_KEY);
   } catch (err: unknown) {
     console.error('Failed to clear SES settings:', err);
+    throw err;
+  }
+}
+
+// ── V2 Config ──
+
+export async function getV2ConfigDB(): Promise<import('@/types').V2Config | null> {
+  try {
+    const db = await getDB();
+    const row = await db.get('settings', V2_CONFIG_KEY);
+    if (row && row.id === V2_CONFIG_KEY) {
+      return row.data;
+    }
+    return null;
+  } catch (err: unknown) {
+    console.error('Failed to get V2 Config:', err);
+    return null;
+  }
+}
+
+export async function saveV2ConfigDB(config: import('@/types').V2Config): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.put('settings', { id: V2_CONFIG_KEY, data: config });
+  } catch (err: unknown) {
+    console.error('Failed to save V2 Config:', err);
+    throw err;
+  }
+}
+
+export async function clearV2ConfigDB(): Promise<void> {
+  try {
+    const db = await getDB();
+    await db.delete('settings', V2_CONFIG_KEY);
+  } catch (err: unknown) {
+    console.error('Failed to clear V2 Config:', err);
     throw err;
   }
 }

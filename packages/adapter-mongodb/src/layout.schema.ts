@@ -1,22 +1,18 @@
 import { Schema, Document } from 'mongoose';
-import { Template } from '@previewmail/nestjs';
+import { Layout } from '@previewmail/nestjs';
 
-export interface TemplateDocument extends Omit<Template, 'id'>, Document {
+export interface LayoutDocument extends Omit<Layout, 'id'>, Document {
   id: string;
-  layoutId?: string;
 }
 
-export const TemplateSchema = new Schema<TemplateDocument>({
+export const LayoutSchema = new Schema<LayoutDocument>({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   alias: { type: String, required: true, unique: true },
-  subject: { type: String, required: true },
   htmlBody: { type: String, default: '' },
   textBody: { type: String, default: '' },
-  mockData: { type: Schema.Types.Mixed, default: {} },
-  layoutId: { type: String },
   createdAt: { type: Number, required: true },
   updatedAt: { type: Number, required: true },
 });
 
-TemplateSchema.index({ alias: 1 });
+LayoutSchema.index({ alias: 1 });

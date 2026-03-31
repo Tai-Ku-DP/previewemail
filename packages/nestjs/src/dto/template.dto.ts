@@ -24,6 +24,10 @@ export class CreateTemplateDto {
   @IsObject()
   @IsOptional()
   mockData?: Record<string, unknown>;
+
+  @IsString()
+  @IsOptional()
+  layoutId?: string;
 }
 
 export class UpdateTemplateDto extends CreateTemplateDto {}

@@ -5,9 +5,9 @@ import { MongoDBAdapter } from '@previewmail/adapter-mongodb';
 @Module({
   imports: [
     PreviewMailModule.forRoot({
-      apiKey: 'my-super-secret-key', // Set API key here
-      allowedOrigins: ['http://localhost:3000'], // Allow the Next.js frontend to talk to us
-      storage: new MongoDBAdapter('mongodb://127.0.0.1:27017/previewmail_test'), // Note: Replace with your actual local MongoDB or Atlas URI if not using local!
+      apiKey: process.env.PREVIEWMAIL_API_KEY || 'default-secret-key',
+      allowedOrigins: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(','), // Support multiple origins by comma
+      storage: new MongoDBAdapter(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/previewmail_test'),
       rateLimit: { max: 100, windowMs: 60000 },
       cache: { ttl: 60000, max: 100 }
     }),

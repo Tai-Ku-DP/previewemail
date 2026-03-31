@@ -34,6 +34,11 @@ export interface SESSettings {
   fromAddress: string;
 }
 
+export interface V2Config {
+  baseUrl: string;
+  apiKey: string;
+}
+
 export type EditorTab = 'html' | 'text';
 export type TemplateEditorMainTab = 'edit' | 'preview';
 export type RightPanelTab = 'preview' | 'mockdata';

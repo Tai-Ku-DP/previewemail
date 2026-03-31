@@ -3,6 +3,7 @@ import { APP_PIPE } from '@nestjs/core';
 import { PreviewMailOptions } from './interfaces/preview-mail.interfaces';
 import { PreviewMailService } from './preview-mail.service';
 import { PreviewMailController } from './preview-mail.controller';
+import { PreviewMailLayoutController } from './preview-mail-layout.controller';
 import { ApiKeyGuard } from './security/api-key.guard';
 import { RateLimiterGuard } from './security/rate-limiter.guard';
 
@@ -27,14 +28,14 @@ export class PreviewMailModule implements NestModule {
             next();
           }
         })
-        .forRoutes({ path: 'previewmail/templates*', method: RequestMethod.ALL });
+        .forRoutes({ path: 'previewmail/*', method: RequestMethod.ALL });
     }
   }
 
   static forRoot(options: PreviewMailOptions): DynamicModule {
     return {
       module: PreviewMailModule,
-      controllers: [PreviewMailController],
+      controllers: [PreviewMailController, PreviewMailLayoutController],
       providers: [
         {
           provide: 'PREVIEW_MAIL_OPTIONS',
