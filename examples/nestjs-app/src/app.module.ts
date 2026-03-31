@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PreviewMailModule } from '@previewmail/nestjs';
 import { MongoDBAdapter } from '@previewmail/adapter-mongodb';
+import { EmailController } from './email.controller';
+import { EmailService } from './email.service';
 
 @Module({
   imports: [
@@ -12,5 +14,7 @@ import { MongoDBAdapter } from '@previewmail/adapter-mongodb';
       cache: { ttl: 60000, max: 100 }
     }),
   ],
+  controllers: [EmailController],
+  providers: [EmailService],
 })
 export class AppModule {}
