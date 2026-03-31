@@ -7,6 +7,7 @@ import {
   Paintbrush,
   Maximize,
   Minimize,
+  Send,
   // Smartphone,
   // Monitor,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import { formatHtml, formatJson } from "@/lib/formatter";
 import { buildMockDataSkeleton } from "@/lib/handlebars";
 import { StorageIndicator } from "@/components/StorageIndicator";
 import type { Layout } from "@/types";
+import { sendTestEmail } from "@/lib/ses";
 
 export default function TemplateEditorPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -58,6 +60,7 @@ export default function TemplateEditorPage() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
 
   // Template editing state
@@ -82,14 +85,14 @@ export default function TemplateEditorPage() {
   useEffect(() => {
     if (!selectedTemplate) return;
     queueMicrotask(() => {
-      setHtmlBody(selectedTemplate.htmlBody);
-      setTextBody(selectedTemplate.textBody);
-      setSubject(selectedTemplate.subject);
-      setTemplateName(selectedTemplate.name);
-      setTemplateLayoutId(selectedTemplate.layoutId);
-      const json = JSON.stringify(selectedTemplate.mockData, null, 2);
+      setHtmlBody(selectedTemplate.htmlBody || "");
+      setTextBody(selectedTemplate.textBody || "");
+      setSubject(selectedTemplate.subject || "");
+      setTemplateName(selectedTemplate.name || "");
+      setTemplateLayoutId(selectedTemplate.layoutId || null);
+      const json = JSON.stringify(selectedTemplate.mockData || {}, null, 2);
       setMockDataJson(json);
-      reset(selectedTemplate.mockData);
+      reset(selectedTemplate.mockData || {});
       setDirty(false);
     });
   }, [selectedTemplate, reset, setDirty]);
@@ -235,6 +238,33 @@ export default function TemplateEditorPage() {
       updateFromJson,
     ],
   );
+
+  const handleSendTest = useCallback(async () => {
+    if (!settings?.accessKeyId || !settings?.secretAccessKey || !settings?.fromAddress || !settings?.region) {
+      toast.error("Please configure AWS SES credentials in Settings");
+      setSettingsOpen(true);
+      return;
+    }
+    const emailTo = window.prompt("Enter recipient email address:");
+    if (!emailTo) return;
+
+    setIsSendingTest(true);
+    const toastId = toast.loading("Sending test email...");
+    try {
+      await sendTestEmail({
+        to: emailTo.trim(),
+        subject: compiledSubject || subject || "Test PreviewMail",
+        html: renderedHtml || htmlBody,
+        text: textBody,
+        settings,
+      });
+      toast.success("Test email sent!", { id: toastId });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to send test email", { id: toastId });
+    } finally {
+      setIsSendingTest(false);
+    }
+  }, [settings, compiledSubject, subject, renderedHtml, htmlBody, textBody]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -408,6 +438,24 @@ export default function TemplateEditorPage() {
                   </option>
                 ))}
               </select>
+            )}
+
+            {isEditingTemplate && (
+              <button
+                onClick={() => void handleSendTest()}
+                disabled={isSendingTest}
+                className={clsx(
+                  "mr-1.5 inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors border border-border bg-bg",
+                  isSendingTest
+                    ? "opacity-60 cursor-not-allowed text-fg-muted"
+                    : "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
+                )}
+                aria-label="Send test email"
+                title="Send Test Email"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {isSendingTest ? "Sending..." : "Test"}
+              </button>
             )}
 
             {isEditingTemplate && (

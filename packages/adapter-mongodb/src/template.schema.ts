@@ -10,7 +10,7 @@ export const TemplateSchema = new Schema<TemplateDocument>({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   alias: { type: String, required: true, unique: true },
-  subject: { type: String, required: true },
+  subject: { type: String, default: '' },
   htmlBody: { type: String, default: '' },
   textBody: { type: String, default: '' },
   mockData: { type: Schema.Types.Mixed, default: {} },

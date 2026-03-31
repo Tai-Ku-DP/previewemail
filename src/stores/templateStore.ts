@@ -47,7 +47,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         const apiTemplates = await apiClient.getTemplates(config, 1, 100);
         
         // Merge API metadata with full body data from local, so we don't break V1 UI immediately
-        const synced = apiTemplates.map((apiMeta: any) => {
+        const synced = apiTemplates.map((apiMeta) => {
           const localMatch = localTemplates.find(t => t.alias === apiMeta.alias);
           return localMatch ? { ...localMatch, ...apiMeta } : apiMeta;
         });
@@ -60,7 +60,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         }
 
         set({ templates: synced, syncStatus: 'synced', isLoading: false });
-      } catch (err) {
+      } catch {
         set({ templates: localTemplates, syncStatus: 'sync_failed', isLoading: false });
       }
     } catch {
@@ -78,10 +78,12 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Lazy fetch full body from API
       try {
         const fullTemplate = await apiClient.getTemplateByAlias(config, active.alias);
-        await saveTemplateToDB(fullTemplate); // update cache
-        set((state) => ({
-          templates: state.templates.map((t) => (t.id === id ? fullTemplate : t)),
-        }));
+        if (fullTemplate && fullTemplate.id) {
+          await saveTemplateToDB(fullTemplate); // update cache
+          set((state) => ({
+            templates: state.templates.map((t) => (t.id === id ? fullTemplate : t)),
+          }));
+        }
       } catch (err) {
         console.error('Failed to lazy load full template from API', err);
       }
@@ -106,7 +108,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       const template = await createTemplateInDB({ name, alias });
       set((state) => ({ templates: [...state.templates, template], syncStatus: 'local_only' }));
       return template;
-    } catch (err) {
+    } catch {
       // Fallback
       const template = await createTemplateInDB({ name, alias });
       set((state) => ({ templates: [...state.templates, template], syncStatus: 'sync_failed' }));
@@ -139,7 +141,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         templates: state.templates.map((t) => (t.id === id ? updated : t)),
         syncStatus: 'local_only'
       }));
-    } catch (err) {
+    } catch {
       // Sync failed, save to local anyway
       await saveTemplateToDB(updated);
       set((state) => ({
@@ -158,7 +160,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       } else {
         set({ syncStatus: 'local_only' });
       }
-    } catch (err) {
+    } catch {
       set({ syncStatus: 'sync_failed' });
     }
 

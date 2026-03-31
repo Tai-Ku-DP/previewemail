@@ -10,8 +10,8 @@ export class CreateTemplateDto {
   alias!: string;
 
   @IsString()
-  @IsNotEmpty()
-  subject!: string;
+  @IsOptional()
+  subject?: string;
 
   @IsString()
   @IsOptional()

@@ -48,7 +48,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
       try {
         const apiLayouts = await apiClient.getLayouts(config, 1, 100);
         
-        const synced = apiLayouts.map((apiMeta: any) => {
+        const synced = apiLayouts.map((apiMeta) => {
           const localMatch = localLayouts.find(l => l.alias === apiMeta.alias);
           return localMatch ? { ...localMatch, ...apiMeta } : apiMeta;
         });
@@ -60,7 +60,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
         }
 
         set({ layouts: synced, syncStatus: 'synced', isLoading: false });
-      } catch (err) {
+      } catch {
         set({ layouts: localLayouts, syncStatus: 'sync_failed', isLoading: false });
       }
     } catch {
@@ -77,10 +77,12 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
     if (active && config && (!active.htmlBody || active.htmlBody === '')) {
       try {
         const fullLayout = await apiClient.getLayoutByAlias(config, active.alias);
-        await saveLayout(fullLayout);
-        set((state) => ({
-          layouts: state.layouts.map((l) => (l.id === id ? fullLayout : l)),
-        }));
+        if (fullLayout && fullLayout.id) {
+          await saveLayout(fullLayout);
+          set((state) => ({
+            layouts: state.layouts.map((l) => (l.id === id ? fullLayout : l)),
+          }));
+        }
       } catch (err) {
         console.error('Failed to lazy load full layout from API', err);
       }
@@ -104,7 +106,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
       const layout = await createLayoutInDB({ name, alias });
       set((state) => ({ layouts: [...state.layouts, layout], syncStatus: 'local_only' }));
       return layout;
-    } catch (err) {
+    } catch {
       const layout = await createLayoutInDB({ name, alias });
       set((state) => ({ layouts: [...state.layouts, layout], syncStatus: 'sync_failed' }));
       return layout;
@@ -138,7 +140,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
         layouts: state.layouts.map((l) => (l.id === id ? updated : l)),
         syncStatus: 'local_only'
       }));
-    } catch (err) {
+    } catch {
       await saveLayout(updated);
       set((state) => ({
         layouts: state.layouts.map((l) => (l.id === id ? updated : l)),
@@ -156,7 +158,7 @@ export const useLayoutStore = create<LayoutStore>((set, get) => ({
       } else {
         set({ syncStatus: 'local_only' });
       }
-    } catch (err) {
+    } catch {
       set({ syncStatus: 'sync_failed' });
     }
 
