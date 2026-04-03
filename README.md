@@ -2,6 +2,8 @@
 
 PreviewMail is a modern web application designed to help developers and designers **build, manage, and test Email Templates and Layouts** instantly in the browser.
 
+> 🚧 **V2 is in active development!** We are building a full headless CMS backend with `@previewmail/nestjs` and `@previewmail/adapter-mongodb` — allowing your templates to sync directly to your own database and be fetched at runtime without redeploying your app.
+
 [🇻🇳 Xem Hướng Dẫn Sử Dụng Bằng Tiếng Việt bên dưới](#hướng-dẫn-sử-dụng---tiếng-việt)
 
 ---
@@ -88,6 +90,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 # Hướng Dẫn Sử Dụng - Tiếng Việt
 
 PreviewMail là ứng dụng web giúp bạn **quản lý Template Email, Layout Email và Mock Data**, cho phép **preview trực tiếp trong trình duyệt** ngay khi đang viết code.
+
+> 🚧 **V2 đang được phát triển tích cực!** Chúng tôi đang xây dựng backend headless CMS với `@previewmail/nestjs` và `@previewmail/adapter-mongodb` — cho phép template của bạn tự động đồng bộ lên database riêng và được fetch tại runtime mà không cần deploy lại app.
 
 ---
 
