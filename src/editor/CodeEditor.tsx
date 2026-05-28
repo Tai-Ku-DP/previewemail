@@ -100,6 +100,7 @@ export const CodeEditor = ({
         extensions={extensions}
         onChange={handleChange}
         theme="dark"
+        height="100%"
         className="h-full"
         basicSetup={BASIC_SETUP}
       />

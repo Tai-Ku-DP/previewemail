@@ -30,7 +30,7 @@ export const EditorPanel = ({
   );
 
   return (
-    <div defaultValue="html" className="flex h-full flex-col bg-bg">
+    <div defaultValue="html" className="flex flex-1 min-h-0 flex-col bg-bg">
       <CodeEditor
         value={htmlBody}
         tab="html"

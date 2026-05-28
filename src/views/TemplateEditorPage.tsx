@@ -3,15 +3,28 @@ import { Navigate, useParams, useBlocker } from "react-router-dom";
 import { Toaster, toast } from "sonner";
 import { clsx } from "clsx";
 import {
+  ChevronDown,
+  Code2,
+  Eye,
   Settings,
   Paintbrush,
   Maximize,
   Minimize,
+  Pencil,
   Send,
   // Smartphone,
   // Monitor,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/Logo";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -25,12 +38,12 @@ import { usePreview } from "@/hooks/usePreview";
 import { useSettings } from "@/hooks/useSettings";
 import { useV2Config } from "@/hooks/useV2Config";
 import { useEditorStore } from "@/stores/editorStore";
-import { useTemplateStore } from "@/stores/templateStore";
 import { formatHtml, formatJson } from "@/lib/formatter";
 import { buildMockDataSkeleton } from "@/lib/handlebars";
-import { StorageIndicator } from "@/components/StorageIndicator";
 import type { Layout } from "@/types";
 import { sendTestEmail } from "@/lib/ses";
+import { useTemplateStore } from "@/stores/templateStore";
+import { StorageIndicator } from "@/components/StorageIndicator";
 
 export default function TemplateEditorPage() {
   const { templateId } = useParams<{ templateId: string }>();
@@ -55,10 +68,16 @@ export default function TemplateEditorPage() {
   const isDirty = useEditorStore((s) => s.isDirty);
   const setDirty = useEditorStore((s) => s.setDirty);
   const { settings, save: saveSettings, clear: clearSettings } = useSettings();
-  const { config: v2Config, save: saveV2Config, clear: clearV2Config } = useV2Config();
+  const {
+    config: v2Config,
+    save: saveV2Config,
+    clear: clearV2Config,
+  } = useV2Config();
   const syncStatus = useTemplateStore((s) => s.syncStatus);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aliasModalOpen, setAliasModalOpen] = useState(false);
+  const [aliasDraft, setAliasDraft] = useState("");
   const [justSaved, setJustSaved] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const previewSplitRef = useRef<HTMLDivElement | null>(null);
@@ -71,9 +90,7 @@ export default function TemplateEditorPage() {
   const [templateAlias, setTemplateAlias] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
-  const [previewDevice] = useState<"desktop" | "mobile">(
-    "desktop",
-  );
+  const [previewDevice] = useState<"desktop" | "mobile">("desktop");
 
   const { mockData, parseError, updateFromJson, reset } = useMockData();
 
@@ -244,7 +261,12 @@ export default function TemplateEditorPage() {
   );
 
   const handleSendTest = useCallback(async () => {
-    if (!settings?.accessKeyId || !settings?.secretAccessKey || !settings?.fromAddress || !settings?.region) {
+    if (
+      !settings?.accessKeyId ||
+      !settings?.secretAccessKey ||
+      !settings?.fromAddress ||
+      !settings?.region
+    ) {
       toast.error("Please configure AWS SES credentials in Settings");
       setSettingsOpen(true);
       return;
@@ -264,7 +286,10 @@ export default function TemplateEditorPage() {
       });
       toast.success("Test email sent!", { id: toastId });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to send test email", { id: toastId });
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send test email",
+        { id: toastId },
+      );
     } finally {
       setIsSendingTest(false);
     }
@@ -355,6 +380,22 @@ export default function TemplateEditorPage() {
     setDirty,
   ]);
 
+  const openAliasModal = () => {
+    setAliasDraft(templateAlias);
+    setAliasModalOpen(true);
+  };
+
+  const updateAliasDraft = (value: string) => {
+    setAliasDraft(value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase());
+  };
+
+  const commitAliasDraft = () => {
+    const nextAlias = aliasDraft.trim();
+    setTemplateAlias(nextAlias);
+    setDirty(true);
+    setAliasModalOpen(false);
+  };
+
   if (!templateId) return <Navigate to="/templates" replace />;
 
   const templateExists = templates.some((t) => t.id === templateId);
@@ -365,7 +406,7 @@ export default function TemplateEditorPage() {
   const isEditingTemplate = Boolean(selectedTemplate);
 
   return (
-    <div className="flex h-screen flex-col bg-bg overflow-hidden">
+    <div className="flex h-screen flex-col bg-bg overflow-auto">
       <Toaster
         theme="system"
         position="bottom-right"
@@ -391,77 +432,73 @@ export default function TemplateEditorPage() {
         onClearV2Config={clearV2Config}
       />
 
+      {aliasModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setAliasModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg border border-border bg-bg shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-alias-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h2
+                id="edit-alias-title"
+                className="text-sm font-semibold text-fg"
+              >
+                Edit alias
+              </h2>
+              <p className="mt-1 text-xs text-fg-muted">
+                Alias is used for API calls. Use letters, numbers, - or _.
+              </p>
+            </div>
+
+            <form
+              className="space-y-4 px-5 py-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                commitAliasDraft();
+              }}
+            >
+              <label className="block">
+                <span className="mb-1.5 block text-[13px] font-medium text-fg">
+                  Alias
+                </span>
+                <Input
+                  autoFocus
+                  value={aliasDraft}
+                  onChange={(e) => updateAliasDraft(e.target.value)}
+                  placeholder="template-alias"
+                  className="h-10 font-mono text-[13px]"
+                  aria-label="Template alias"
+                />
+              </label>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAliasModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Save alias</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {!editorMaximized && (
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg px-4">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Logo />
-
-            {isEditingTemplate && (
-              <>
-                <Input
-                  type="text"
-                  value={templateName}
-                  onChange={(e) => {
-                    setTemplateName(e.target.value);
-                    setDirty(true);
-                  }}
-                  className="h-7 w-40 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
-                  aria-label="Template name"
-                />
-                <span className="text-fg-faint">&middot;</span>
-                <div className="relative flex shrink-0 items-center">
-                  <span className="pointer-events-none absolute left-1.5 select-none text-[11px] text-fg-muted">#</span>
-                  <Input
-                    type="text"
-                    value={templateAlias}
-                    onChange={(e) => {
-                      // Chỉ cho phép ký tự hợp lệ cho alias: a-z, 0-9, dấu gạch ngang/gạch dưới
-                      const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
-                      setTemplateAlias(val);
-                      setDirty(true);
-                    }}
-                    placeholder="alias"
-                    className="h-7 w-36 rounded-md border-transparent bg-transparent pl-4 pr-1.5 font-mono text-[12px] text-fg-secondary shadow-none placeholder:text-fg-muted transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
-                    aria-label="Template alias"
-                    title="Alias được dùng để gọi template qua API. Chỉ gồm chữ thường, số, dấu - hoặc _"
-                  />
-                </div>
-                <span className="text-fg-faint">&middot;</span>
-                <Input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => {
-                    setSubject(e.target.value);
-                    setDirty(true);
-                  }}
-                  placeholder="Subject line {{variables}}"
-                  className="h-7 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-1.5 text-[13px] text-fg-secondary shadow-none placeholder:text-fg-muted transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
-                  aria-label="Email subject"
-                />
-              </>
-            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            {isEditingTemplate && (
-              <select
-                value={templateLayoutId ?? ""}
-                onChange={(e) => {
-                  setTemplateLayoutId(e.target.value || null);
-                  setDirty(true);
-                }}
-                className="h-8 rounded-md border border-border bg-bg px-2 pr-7 text-[12px] text-fg-secondary transition-colors hover:bg-bg-subtle"
-                aria-label="Select layout"
-              >
-                <option value="">No layout</option>
-                {layouts.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
             {isEditingTemplate && (
               <button
                 onClick={() => void handleSendTest()}
@@ -470,25 +507,13 @@ export default function TemplateEditorPage() {
                   "mr-1.5 inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors border border-border bg-bg",
                   isSendingTest
                     ? "opacity-60 cursor-not-allowed text-fg-muted"
-                    : "text-fg-secondary hover:bg-bg-subtle hover:text-fg"
+                    : "text-fg-secondary hover:bg-bg-subtle hover:text-fg",
                 )}
                 aria-label="Send test email"
                 title="Send Test Email"
               >
                 <Send className="h-3.5 w-3.5" />
                 {isSendingTest ? "Sending..." : "Test"}
-              </button>
-            )}
-
-            {isEditingTemplate && (
-              <button
-                id="tour-editor-save"
-                onClick={() => void handleSaveTemplate()}
-                className="inline-flex h-8 items-center rounded-md bg-fg px-3.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
-                aria-label="Save"
-                title="Save (Ctrl+S / Cmd+S)"
-              >
-                {justSaved && !isDirty ? "Saved ✓" : "Save"}
               </button>
             )}
 
@@ -542,40 +567,159 @@ export default function TemplateEditorPage() {
         </header>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      {!editorMaximized && (
+        <header className="shrink-0 overflow-x-auto bg-bg px-5 py-4">
+          {isEditingTemplate ? (
+            <div className="grid min-w-[920px] grid-cols-[minmax(240px,0.9fr)_minmax(360px,1.45fr)_minmax(150px,0.42fr)_34px] items-end gap-4">
+              <div className="min-w-0">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="template-name"
+                    className="text-[13px] font-semibold leading-none text-fg"
+                  >
+                    Name
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openAliasModal}
+                    className="min-w-0 rounded px-1 py-0.5 text-left text-[12px] font-medium text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg focus-visible:ring-2 focus-visible:ring-ring/40"
+                    title="Edit alias"
+                    aria-label="Edit template alias"
+                  >
+                    <span>Alias: </span>
+                    <span className="font-mono text-[12px] underline decoration-border underline-offset-4">
+                      {templateAlias || "alias"}
+                    </span>
+                  </button>
+                </div>
+                <Input
+                  id="template-name"
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => {
+                    setTemplateName(e.target.value);
+                    setDirty(true);
+                  }}
+                  className="h-11 rounded-md border-border bg-bg px-3 text-[15px] font-semibold text-fg shadow-sm focus-visible:ring-2 focus-visible:ring-ring/30"
+                  aria-label="Template name"
+                />
+              </div>
+
+              <label className="min-w-0">
+                <span className="mb-2 block text-[13px] font-semibold leading-none text-fg">
+                  Subject
+                </span>
+                <Input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                    setDirty(true);
+                  }}
+                  placeholder="Subject line {{variables}}"
+                  className="h-11 rounded-md border-border bg-bg px-3 text-[15px] font-semibold text-fg shadow-sm placeholder:text-fg-muted focus-visible:ring-2 focus-visible:ring-ring/30"
+                  aria-label="Email subject"
+                  title="Supports {{variables}}"
+                />
+              </label>
+
+              <div className="flex min-w-0 items-end">
+                <Button
+                  id="tour-editor-save"
+                  onClick={() => void handleSaveTemplate()}
+                  className={clsx(
+                    "h-11 w-full rounded-md text-[14px] font-semibold transition-colors",
+                    isDirty
+                      ? "bg-fg text-bg hover:bg-fg/90"
+                      : "bg-[#b7b7b7] text-white hover:bg-[#a9a9a9]",
+                  )}
+                  aria-label="Save"
+                  title="Save (Ctrl+S / Cmd+S)"
+                >
+                  {justSaved && !isDirty ? "Saved" : "Save"}
+                </Button>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="mb-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-bg text-fg-muted shadow-sm transition-colors hover:bg-bg-subtle hover:text-fg"
+                  aria-label="Template actions"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Template actions</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <div className="flex items-center justify-between gap-2 px-1.5 py-1">
+                    <span className="text-sm text-fg-secondary">Theme</span>
+                    <ThemeToggle />
+                  </div>
+                  <div className="px-1.5 py-1">
+                    <EditorTour />
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex h-16 items-center justify-between">
+              <Logo />
+              <ThemeToggle />
+            </div>
+          )}
+        </header>
+      )}
+
+      <div
+        className={clsx(
+          "flex min-h-0 flex-1",
+          isEditingTemplate && !editorMaximized && "bg-bg px-5 pb-5",
+        )}
+      >
         {isEditingTemplate ? (
-          <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex h-10 shrink-0 items-end justify-between border-b border-border bg-bg px-2">
+          <div
+            className={clsx(
+              "flex min-w-0 flex-1 flex-col overflow-hidden h-[700px]",
+              !editorMaximized &&
+                "rounded-md border border-[#1f232b] bg-[#2f333b] shadow-[0_14px_36px_rgba(15,23,42,0.18)]",
+            )}
+          >
+            <div className="flex h-12 shrink-0 items-stretch justify-between bg-[#24272e]">
               <div className="flex">
                 <button
                   onClick={() => setTemplateEditorMainTab("edit")}
                   className={clsx(
-                    "relative h-10 px-3 text-[13px] font-medium transition-colors",
+                    "inline-flex min-w-[112px] items-center gap-2 px-5 text-[14px] font-semibold transition-colors",
                     templateEditorMainTab === "edit"
-                      ? "text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg"
-                      : "text-fg-muted hover:text-fg-secondary",
+                      ? "bg-[#30343c] text-white"
+                      : "text-[#a7acb8] hover:bg-[#2a2e36] hover:text-white",
                   )}
                   aria-label="Edit tab"
                 >
+                  <Pencil className="h-4 w-4 text-[#f7df4d]" />
                   Edit
                 </button>
                 <button
                   id="tour-editor-preview-tab"
                   onClick={() => setTemplateEditorMainTab("preview")}
                   className={clsx(
-                    "relative h-10 px-3 text-[13px] font-medium transition-colors",
+                    "inline-flex min-w-[124px] items-center gap-2 px-5 text-[14px] font-semibold transition-colors",
                     templateEditorMainTab === "preview"
-                      ? "text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:rounded-full after:bg-fg"
-                      : "text-fg-muted hover:text-fg-secondary",
+                      ? "bg-[#30343c] text-white"
+                      : "text-[#a7acb8] hover:bg-[#2a2e36] hover:text-white",
                   )}
                   aria-label="Preview tab"
                 >
+                  <Eye className="h-4 w-4" />
                   Preview
                 </button>
               </div>
 
-              <div className="flex items-center gap-4 mb-1">
-                <div className="text-[11px] text-fg-muted">
+              <div className="flex items-center gap-3 px-4">
+                <div className="hidden text-[11px] font-medium text-[#8f96a6] xl:block">
                   <kbd className="rounded border border-border bg-bg-subtle px-1.5 py-0.5 font-mono text-[10px]">
                     ⌘/
                   </kbd>{" "}
@@ -583,6 +727,31 @@ export default function TemplateEditorPage() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
+                  {templateEditorMainTab === "edit" && (
+                    <label className="inline-flex h-7 w-52 items-center gap-2 rounded-md border border-[#687083] bg-transparent px-2.5 text-[12px] font-semibold text-[#a7acb8] transition-colors focus-within:border-[#9aa3b7] hover:bg-[#30343c]">
+                      <span className="shrink-0 text-[12px] font-semibold text-[#8f96a6]">
+                        Layout
+                      </span>
+                      <select
+                        value={templateLayoutId ?? ""}
+                        onChange={(e) => {
+                          setTemplateLayoutId(e.target.value || null);
+                          setDirty(true);
+                        }}
+                        className="min-w-0 flex-1 border-0 bg-transparent text-[12px] text-[#c9ced8] outline-none"
+                        aria-label="Select layout"
+                        title="Reusable email shell"
+                      >
+                        <option value="">No layout</option>
+                        {layouts.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
                   {/* {templateEditorMainTab === "preview" && (
                     <div className="flex items-center rounded-md border border-border bg-bg-subtle p-0.5 text-[12px]">
                       <button
@@ -617,7 +786,7 @@ export default function TemplateEditorPage() {
                   {templateEditorMainTab === "preview" && (
                     <button
                       onClick={togglePreviewMockData}
-                      className="inline-flex h-7 items-center rounded-md border border-border bg-bg px-2.5 text-[12px] font-medium text-fg-secondary transition-colors hover:bg-bg-subtle hover:text-fg"
+                      className="inline-flex h-7 items-center rounded-md border border-[#687083] bg-transparent px-2.5 text-[12px] font-semibold text-[#a7acb8] transition-colors hover:bg-[#30343c] hover:text-white"
                       aria-label={
                         previewMockDataOpen
                           ? "Hide mock data"
@@ -652,10 +821,10 @@ export default function TemplateEditorPage() {
                       }}
                       disabled={!htmlBody.trim()}
                       className={clsx(
-                        "inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium transition-colors",
+                        "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors",
                         !htmlBody.trim()
-                          ? "opacity-50 cursor-not-allowed text-fg-muted bg-bg-subtle"
-                          : "bg-bg text-fg-secondary hover:bg-bg-subtle hover:text-fg",
+                          ? "cursor-not-allowed border-[#4a5060] bg-transparent text-[#727987] opacity-60"
+                          : "border-[#687083] bg-transparent text-[#a7acb8] hover:bg-[#30343c] hover:text-white",
                       )}
                       aria-label="Format code"
                       title="Format HTML (Shift+Alt+F)"
@@ -664,11 +833,28 @@ export default function TemplateEditorPage() {
                       Format
                     </button>
                   )}
+                  {templateEditorMainTab === "edit" && (
+                    <button
+                      onClick={() => void handleSendTest()}
+                      disabled={isSendingTest}
+                      className={clsx(
+                        "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-semibold transition-colors",
+                        isSendingTest
+                          ? "cursor-not-allowed border-[#4a5060] bg-transparent text-[#727987]"
+                          : "border-[#687083] bg-transparent text-[#a7acb8] hover:bg-[#30343c] hover:text-white",
+                      )}
+                      aria-label="Send test email"
+                      title="Send Test Email"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      {isSendingTest ? "Sending..." : "Send test"}
+                    </button>
+                  )}
                   <button
                     onClick={() =>
                       useEditorStore.getState().toggleEditorMaximized()
                     }
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-bg text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#8f96a6] transition-colors hover:bg-[#30343c] hover:text-white"
                     aria-label={
                       editorMaximized ? "Exit fullscreen" : "Fullscreen editor"
                     }
@@ -700,6 +886,25 @@ export default function TemplateEditorPage() {
                 )}
                 aria-hidden={templateEditorMainTab !== "edit"}
               >
+                <div className="flex h-12 shrink-0 items-center bg-[#30343c] px-5">
+                  <div className="flex overflow-hidden rounded-md bg-[#22262e] p-1">
+                    <button
+                      className="inline-flex h-8 min-w-[92px] items-center justify-center gap-2 rounded-[4px] bg-[#4b515d] px-4 text-[13px] font-semibold text-white shadow-sm"
+                      aria-label="HTML editor"
+                    >
+                      <Code2 className="h-4 w-4" />
+                      HTML
+                    </button>
+                    <button
+                      className="inline-flex h-8 min-w-[92px] items-center justify-center gap-2 rounded-[4px] px-4 text-[13px] font-semibold text-[#8f96a6] opacity-80"
+                      aria-label="Text editor disabled"
+                      disabled
+                    >
+                      <span className="text-[#f7df4d]">!</span>
+                      Text
+                    </button>
+                  </div>
+                </div>
                 <EditorPanel
                   htmlBody={htmlBody}
                   editorTabActive={templateEditorMainTab === "edit"}
