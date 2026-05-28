@@ -68,6 +68,7 @@ export default function TemplateEditorPage() {
   const [textBody, setTextBody] = useState("");
   const [subject, setSubject] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const [templateAlias, setTemplateAlias] = useState("");
   const [templateLayoutId, setTemplateLayoutId] = useState<string | null>(null);
   const [mockDataJson, setMockDataJson] = useState("{}");
   const [previewDevice] = useState<"desktop" | "mobile">(
@@ -89,6 +90,7 @@ export default function TemplateEditorPage() {
       setTextBody(selectedTemplate.textBody || "");
       setSubject(selectedTemplate.subject || "");
       setTemplateName(selectedTemplate.name || "");
+      setTemplateAlias(selectedTemplate.alias || "");
       setTemplateLayoutId(selectedTemplate.layoutId || null);
       const json = JSON.stringify(selectedTemplate.mockData || {}, null, 2);
       setMockDataJson(json);
@@ -200,6 +202,7 @@ export default function TemplateEditorPage() {
         const nextMockData = overrides?.mockData ?? mockData;
         await updateTemplate(selectedTemplate.id, {
           name: templateName,
+          alias: templateAlias || selectedTemplate.alias,
           htmlBody: nextHtmlBody,
           textBody,
           subject,
@@ -227,6 +230,7 @@ export default function TemplateEditorPage() {
     [
       selectedTemplate,
       templateName,
+      templateAlias,
       htmlBody,
       textBody,
       subject,
@@ -401,9 +405,27 @@ export default function TemplateEditorPage() {
                     setTemplateName(e.target.value);
                     setDirty(true);
                   }}
-                  className="h-7 w-48 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-7 w-40 shrink-0 rounded-md border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg shadow-none transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
                   aria-label="Template name"
                 />
+                <span className="text-fg-faint">&middot;</span>
+                <div className="relative flex shrink-0 items-center">
+                  <span className="pointer-events-none absolute left-1.5 select-none text-[11px] text-fg-muted">#</span>
+                  <Input
+                    type="text"
+                    value={templateAlias}
+                    onChange={(e) => {
+                      // Chỉ cho phép ký tự hợp lệ cho alias: a-z, 0-9, dấu gạch ngang/gạch dưới
+                      const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+                      setTemplateAlias(val);
+                      setDirty(true);
+                    }}
+                    placeholder="alias"
+                    className="h-7 w-36 rounded-md border-transparent bg-transparent pl-4 pr-1.5 font-mono text-[12px] text-fg-secondary shadow-none placeholder:text-fg-muted transition-colors hover:border-border focus-visible:border-border focus-visible:bg-bg-subtle focus-visible:ring-0 focus-visible:ring-offset-0"
+                    aria-label="Template alias"
+                    title="Alias được dùng để gọi template qua API. Chỉ gồm chữ thường, số, dấu - hoặc _"
+                  />
+                </div>
                 <span className="text-fg-faint">&middot;</span>
                 <Input
                   type="text"

@@ -12,7 +12,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "example:nestjs": "npm run start:dev -w examples/nestjs-app"
+    "build:adapter-mongodb": "tsc -p packages/adapter-mongodb/tsconfig.json",
+    "build:nestjs": "tsc -p packages/nestjs/tsconfig.json",
+    "build:packages": "npm run build:nestjs && npm run build:adapter-mongodb",
+    "example:nestjs": "npm run build:packages && npm run start:dev -w examples/nestjs-app"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1009.0",

@@ -28,6 +28,7 @@ export default function LayoutEditorPage() {
   const editorMaximized = useEditorStore((s) => s.editorMaximized);
 
   const [layoutName, setLayoutName] = useState("");
+  const [layoutAlias, setLayoutAlias] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [textBody, setTextBody] = useState("");
   const [justSaved, setJustSaved] = useState(false);
@@ -46,6 +47,7 @@ export default function LayoutEditorPage() {
     if (!selectedLayout) return;
     queueMicrotask(() => {
       setLayoutName(selectedLayout.name);
+      setLayoutAlias(selectedLayout.alias || "");
       setHtmlBody(selectedLayout.htmlBody);
       setTextBody(selectedLayout.textBody);
       const json = JSON.stringify({}, null, 2);
@@ -147,6 +149,7 @@ export default function LayoutEditorPage() {
         const nextHtmlBody = overrides?.htmlBody ?? htmlBody;
         await updateLayout(selectedLayout.id, {
           name: layoutName,
+          alias: layoutAlias || selectedLayout.alias,
           htmlBody: nextHtmlBody,
           textBody,
         });
@@ -161,7 +164,7 @@ export default function LayoutEditorPage() {
         toast.error("Failed to save layout");
       }
     },
-    [selectedLayout, updateLayout, layoutName, htmlBody, textBody, setDirty],
+    [selectedLayout, updateLayout, layoutName, layoutAlias, htmlBody, textBody, setDirty],
   );
 
   const saveInProgress = useRef(false);
@@ -235,16 +238,35 @@ export default function LayoutEditorPage() {
             <Logo />
 
             {isEditingLayout && (
-              <input
-                type="text"
-                value={layoutName}
-                onChange={(e) => {
-                  setLayoutName(e.target.value);
-                  setDirty(true);
-                }}
-                className="h-7 w-56 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
-                aria-label="Layout name"
-              />
+              <>
+                <input
+                  type="text"
+                  value={layoutName}
+                  onChange={(e) => {
+                    setLayoutName(e.target.value);
+                    setDirty(true);
+                  }}
+                  className="h-7 w-40 shrink-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] font-medium text-fg transition-colors hover:border-border focus:border-border focus:bg-bg-subtle"
+                  aria-label="Layout name"
+                />
+                <span className="text-fg-faint">&middot;</span>
+                <div className="relative flex shrink-0 items-center">
+                  <span className="pointer-events-none absolute left-1.5 select-none text-[11px] text-fg-muted">#</span>
+                  <input
+                    type="text"
+                    value={layoutAlias}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+                      setLayoutAlias(val);
+                      setDirty(true);
+                    }}
+                    placeholder="alias"
+                    className="h-7 w-36 rounded-md border border-transparent bg-transparent pl-4 pr-1.5 font-mono text-[12px] text-fg-secondary transition-colors hover:border-border focus:border-border focus:bg-bg-subtle outline-none"
+                    aria-label="Layout alias"
+                    title="Alias được dùng để gọi layout qua API. Chỉ gồm chữ thường, số, dấu - hoặc _"
+                  />
+                </div>
+              </>
             )}
           </div>
 
